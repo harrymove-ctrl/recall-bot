@@ -1,4 +1,3 @@
-import { eq, and } from "drizzle-orm";
 import type { App } from "@slack/bolt";
 import type { Database } from "../db/client.js";
 import { users } from "../db/schema.js";
@@ -19,7 +18,7 @@ export async function issueDelegateKey(db: Database, workspaceId: string, slackU
 }
 
 export function registerRecallKeyCommand(app: App, db: Database): void {
-  app.command("/recall-key", async ({ command, ack, client, logger }) => {
+  app.command("/recall-key", async ({ command, ack, client, logger, respond }) => {
     await ack();
 
     try {
@@ -28,6 +27,10 @@ export function registerRecallKeyCommand(app: App, db: Database): void {
       });
       if (!workspaceIdRow) {
         logger.error(`No workspace found for team ${command.team_id}`);
+        await respond({
+          text: "Something went wrong issuing your recall key. Please try again, or contact an admin if this keeps happening.",
+          response_type: "ephemeral",
+        });
         return;
       }
 
@@ -40,6 +43,10 @@ export function registerRecallKeyCommand(app: App, db: Database): void {
       });
     } catch (error) {
       logger.error(error);
+      await respond({
+        text: "Something went wrong issuing your recall key. Please try again, or contact an admin if this keeps happening.",
+        response_type: "ephemeral",
+      });
     }
   });
 }
