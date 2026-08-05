@@ -8,7 +8,17 @@ export interface SlackFileObject {
   name: string;
   mimetype: string;
   url_private: string;
+  /** Byte size Slack reports for the upload; used to reject files too large to buffer. */
+  size: number;
 }
+
+/**
+ * Slack accepts uploads of up to 1GB, and downloadSlackFile buffers the whole response in memory
+ * before it is streamed to the bucket. This is a single process that also serves Slack events and
+ * MCP requests, so one large attachment would take everything down with it. Files above this are
+ * recorded as failed without a download attempt rather than risking the process.
+ */
+export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export async function downloadSlackFile(url: string, botToken: string): Promise<Buffer> {
   const res = await fetch(url, {
@@ -29,6 +39,17 @@ export interface CaptureSlackFileParams {
 
 export async function captureSlackFile(params: CaptureSlackFileParams): Promise<void> {
   const { db, file, botToken, messageId } = params;
+
+  // `>` (not `>=`) so a file exactly at the limit is still captured. If Slack omits `size`
+  // entirely the comparison is false and we fall through to the normal download path.
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    console.error(
+      `captureSlackFile: skipping oversize Slack file ${file.id} (${file.name}) for message ${messageId}: ` +
+        `${file.size} bytes exceeds the ${MAX_FILE_SIZE_BYTES} byte limit`,
+    );
+    await db.insert(files).values({ messageId, originalName: file.name, mimeType: file.mimetype, status: "failed" });
+    return;
+  }
 
   const [fileRow] = await db
     .insert(files)

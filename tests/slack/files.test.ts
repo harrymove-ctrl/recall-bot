@@ -3,7 +3,7 @@ import { mockClient } from "aws-sdk-client-mock";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "../../src/db/client.js";
 import { workspaces, namespaces, messages, files } from "../../src/db/schema.js";
-import { downloadSlackFile, captureSlackFile } from "../../src/slack/files.js";
+import { downloadSlackFile, captureSlackFile, MAX_FILE_SIZE_BYTES } from "../../src/slack/files.js";
 import { eq } from "drizzle-orm";
 
 const s3Mock = mockClient(S3Client);
@@ -69,6 +69,7 @@ describe("captureSlackFile", () => {
         name: "report.txt",
         mimetype: "text/plain",
         url_private: "https://files.slack.com/f1",
+        size: 5,
       },
     });
 
@@ -92,6 +93,7 @@ describe("captureSlackFile", () => {
         name: "broken.txt",
         mimetype: "text/plain",
         url_private: "https://files.slack.com/f2",
+        size: 5,
       },
     });
 
@@ -104,5 +106,60 @@ describe("captureSlackFile", () => {
     expect(logged).toContain("F2");
     expect(logged).toContain(message.id);
     consoleError.mockRestore();
+  });
+
+  it("marks a file over the size limit failed without downloading or uploading it", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const message = await seedMessage();
+
+    await captureSlackFile({
+      db,
+      messageId: message.id,
+      botToken: "xoxb-token",
+      file: {
+        id: "F3",
+        name: "huge.zip",
+        mimetype: "application/zip",
+        url_private: "https://files.slack.com/f3",
+        size: MAX_FILE_SIZE_BYTES + 1,
+      },
+    });
+
+    // buffering this in memory would take down the process that also serves Slack events and MCP
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(s3Mock.commandCalls(PutObjectCommand)).toHaveLength(0);
+
+    const [fileRow] = await db.select().from(files).where(eq(files.messageId, message.id));
+    expect(fileRow.status).toBe("failed");
+    expect(fileRow.originalName).toBe("huge.zip");
+    expect(fileRow.bucketKey).toBeNull();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("still captures a file sitting exactly on the size limit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => new TextEncoder().encode("bytes").buffer }),
+    );
+    const message = await seedMessage();
+
+    await captureSlackFile({
+      db,
+      messageId: message.id,
+      botToken: "xoxb-token",
+      file: {
+        id: "F4",
+        name: "exactly-at-limit.bin",
+        mimetype: "application/octet-stream",
+        url_private: "https://files.slack.com/f4",
+        size: MAX_FILE_SIZE_BYTES,
+      },
+    });
+
+    const [fileRow] = await db.select().from(files).where(eq(files.messageId, message.id));
+    expect(fileRow.status).toBe("stored");
   });
 });
