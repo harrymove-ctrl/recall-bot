@@ -1,8 +1,21 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { and, eq } from "drizzle-orm";
+import { mockClient } from "aws-sdk-client-mock";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "../../src/db/client.js";
-import { workspaces, namespaces, messages } from "../../src/db/schema.js";
+import { workspaces, namespaces, messages, files } from "../../src/db/schema.js";
 import { backfillThread } from "../../src/slack/backfill.js";
+
+const s3Mock = mockClient(S3Client);
+
+beforeEach(() => {
+  s3Mock.reset();
+  s3Mock.on(PutObjectCommand).resolves({});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function fakeWebClient(pages: Array<{ messages: any[]; nextCursor?: string }>) {
   let call = 0;
@@ -90,6 +103,107 @@ describe("backfillThread", () => {
     expect(second.namespaceId).toBe(first.namespaceId);
     const rows = await db.select().from(messages).where(eq(messages.namespaceId, first.namespaceId));
     expect(rows).toHaveLength(1);
+  });
+
+  it("retries a previously-failed file capture when the message is re-processed", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T5", name: "T" }).returning();
+
+    const rawMessage = {
+      ts: "5.000",
+      user: "U1",
+      text: "here is the spec",
+      files: [
+        {
+          id: "F5",
+          name: "spec.txt",
+          mimetype: "text/plain",
+          url_private: "https://files.slack.com/f5",
+          size: 12,
+        },
+      ],
+    };
+
+    // first pass: Slack is down for file downloads, so the attachment lands at status='failed'
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "Server Error" }));
+    const { namespaceId } = await backfillThread({
+      db,
+      client: fakeWebClient([{ messages: [rawMessage] }]),
+      workspaceId: workspace.id,
+      channelId: "C5",
+      threadTs: "5.000",
+      botToken: "xoxb-token",
+    });
+
+    const [messageRow] = await db.select().from(messages).where(eq(messages.namespaceId, namespaceId));
+    let fileRows = await db.select().from(files).where(eq(files.messageId, messageRow.id));
+    expect(fileRows).toHaveLength(1);
+    expect(fileRows[0].status).toBe("failed");
+    consoleError.mockRestore();
+
+    // second pass (user re-tags the thread): the message already exists, so onConflictDoNothing
+    // returns nothing — the stranded attachment must still be retried.
+    const okFetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, arrayBuffer: async () => new TextEncoder().encode("spec-bytes").buffer });
+    vi.stubGlobal("fetch", okFetch);
+    await backfillThread({
+      db,
+      client: fakeWebClient([{ messages: [rawMessage] }]),
+      workspaceId: workspace.id,
+      channelId: "C5",
+      threadTs: "5.000",
+      botToken: "xoxb-token",
+    });
+
+    expect(okFetch).toHaveBeenCalledWith("https://files.slack.com/f5", expect.anything());
+    fileRows = await db.select().from(files).where(eq(files.messageId, messageRow.id));
+    expect(fileRows).toHaveLength(1); // the stale failed row is replaced, not duplicated
+    expect(fileRows[0].status).toBe("stored");
+    expect(await db.select().from(messages).where(eq(messages.namespaceId, namespaceId))).toHaveLength(1);
+  });
+
+  it("does not re-download files that were already stored on an earlier pass", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T6", name: "T" }).returning();
+    const rawMessage = {
+      ts: "6.000",
+      user: "U1",
+      text: "here is the spec",
+      files: [
+        { id: "F6", name: "spec.txt", mimetype: "text/plain", url_private: "https://files.slack.com/f6", size: 12 },
+      ],
+    };
+
+    const firstFetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, arrayBuffer: async () => new TextEncoder().encode("bytes").buffer });
+    vi.stubGlobal("fetch", firstFetch);
+    const { namespaceId } = await backfillThread({
+      db,
+      client: fakeWebClient([{ messages: [rawMessage] }]),
+      workspaceId: workspace.id,
+      channelId: "C6",
+      threadTs: "6.000",
+      botToken: "xoxb-token",
+    });
+    expect(firstFetch).toHaveBeenCalledTimes(1);
+
+    const secondFetch = vi.fn();
+    vi.stubGlobal("fetch", secondFetch);
+    await backfillThread({
+      db,
+      client: fakeWebClient([{ messages: [rawMessage] }]),
+      workspaceId: workspace.id,
+      channelId: "C6",
+      threadTs: "6.000",
+      botToken: "xoxb-token",
+    });
+
+    expect(secondFetch).not.toHaveBeenCalled();
+    const [messageRow] = await db.select().from(messages).where(eq(messages.namespaceId, namespaceId));
+    const fileRows = await db.select().from(files).where(eq(files.messageId, messageRow.id));
+    expect(fileRows).toHaveLength(1);
+    expect(fileRows[0].status).toBe("stored");
   });
 
   it("retries a transient conversations.replies failure and still completes", async () => {
