@@ -27,6 +27,9 @@ function fakeClient(replies: any[] = []) {
     conversations: {
       replies: vi.fn().mockResolvedValue({ messages: replies, response_metadata: {} }),
     },
+    chat: {
+      postMessage: vi.fn().mockResolvedValue({ ok: true }),
+    },
   } as any;
 }
 
@@ -69,6 +72,53 @@ describe("handleAppMention", () => {
       .where(and(eq(namespaces.workspaceId, workspace.id), eq(namespaces.channelId, "C1"), eq(namespaces.threadTs, "1.000")));
     expect(namespace).toBeDefined();
     expect(namespace.status).toBe("active");
+  });
+
+  it("replies in-thread with the namespace id so it is discoverable for the MCP recall tool", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T1b", name: "T" }).returning();
+    const client = fakeClient([{ ts: "5.000", user: "U1", text: "root" }]);
+
+    await handleAppMention({
+      db,
+      client,
+      botToken: "xoxb-token",
+      event: { channel: "C5", ts: "5.010", thread_ts: "5.000", user: "U9", text: "<@BOT> save this" } as any,
+      workspaceId: workspace.id,
+    });
+
+    const [namespace] = await db
+      .select()
+      .from(namespaces)
+      .where(and(eq(namespaces.workspaceId, workspace.id), eq(namespaces.channelId, "C5")));
+
+    expect(client.chat.postMessage).toHaveBeenCalledTimes(1);
+    const call = client.chat.postMessage.mock.calls[0][0];
+    expect(call.channel).toBe("C5");
+    expect(call.thread_ts).toBe("5.000");
+    expect(call.text).toContain(namespace.id);
+    expect(call.text).toContain("/recall-key");
+  });
+
+  it("still completes the capture when the confirmation reply fails to post", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T1c", name: "T" }).returning();
+    const client = fakeClient([{ ts: "6.000", user: "U1", text: "root" }]);
+    client.chat.postMessage.mockRejectedValue(new Error("missing_scope"));
+
+    await expect(
+      handleAppMention({
+        db,
+        client,
+        botToken: "xoxb-token",
+        event: { channel: "C6", ts: "6.000", thread_ts: undefined, user: "U9", text: "<@BOT> save this" } as any,
+        workspaceId: workspace.id,
+      }),
+    ).resolves.toBeUndefined();
+
+    const rows = await db.select().from(messages);
+    expect(rows).toHaveLength(1);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });
 

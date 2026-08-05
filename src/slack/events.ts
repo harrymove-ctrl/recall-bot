@@ -25,7 +25,7 @@ export async function handleAppMention(params: {
   const { db, client, botToken, workspaceId, event } = params;
   const threadTs = event.thread_ts ?? event.ts;
 
-  await backfillThread({
+  const { namespaceId } = await backfillThread({
     db,
     client,
     workspaceId,
@@ -38,6 +38,24 @@ export async function handleAppMention(params: {
     .update(namespaces)
     .set({ status: "active", updatedAt: new Date() })
     .where(and(eq(namespaces.workspaceId, workspaceId), eq(namespaces.channelId, event.channel), eq(namespaces.threadTs, threadTs)));
+
+  // The MCP `recall` tool takes a namespaceId and nothing else, so this reply is the only
+  // place that id is ever surfaced — without it neither the user nor their coding agent has
+  // any way to discover what to recall. Posting it in-thread keeps it next to the content.
+  try {
+    await client.chat.postMessage({
+      channel: event.channel,
+      thread_ts: threadTs,
+      text:
+        `Got it — this thread is now saved. Run \`/recall-key\` in a DM with me to get your delegate key, ` +
+        `then ask your agent to look up namespace \`${namespaceId}\`.`,
+    });
+  } catch (error) {
+    // The capture itself already succeeded and is committed. Throwing here would make Slack
+    // retry the whole app_mention (re-running the entire backfill) over a cosmetic failure
+    // such as a missing chat:write scope, so log and move on.
+    console.error(`handleAppMention: failed to post confirmation for namespace ${namespaceId}:`, error);
+  }
 }
 
 interface MessageLikeEvent {
