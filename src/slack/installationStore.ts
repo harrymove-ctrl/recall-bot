@@ -17,26 +17,28 @@ export function createPostgresInstallationStore(db: Database): InstallationStore
         throw new Error("Failed saving installation: missing team id or bot token");
       }
 
-      const [workspace] = await db
-        .insert(workspaces)
-        .values({ slackTeamId: teamId, name: installation.team?.name ?? teamId })
-        .onConflictDoUpdate({
-          target: workspaces.slackTeamId,
-          set: { name: installation.team?.name ?? teamId, updatedAt: new Date() },
-        })
-        .returning();
+      await db.transaction(async (tx) => {
+        const [workspace] = await tx
+          .insert(workspaces)
+          .values({ slackTeamId: teamId, name: installation.team?.name ?? teamId })
+          .onConflictDoUpdate({
+            target: workspaces.slackTeamId,
+            set: { name: installation.team?.name ?? teamId, updatedAt: new Date() },
+          })
+          .returning();
 
-      await db
-        .insert(installations)
-        .values({
-          workspaceId: workspace.id,
-          botToken: bot.token,
-          botUserId: bot.userId,
-        })
-        .onConflictDoUpdate({
-          target: installations.workspaceId,
-          set: { botToken: bot.token, botUserId: bot.userId, revokedAt: null, updatedAt: new Date() },
-        });
+        await tx
+          .insert(installations)
+          .values({
+            workspaceId: workspace.id,
+            botToken: bot.token,
+            botUserId: bot.userId,
+          })
+          .onConflictDoUpdate({
+            target: installations.workspaceId,
+            set: { botToken: bot.token, botUserId: bot.userId, revokedAt: null, updatedAt: new Date() },
+          });
+      });
     },
 
     async fetchInstallation(query: InstallationQuery<boolean>): Promise<Installation<"v1" | "v2", boolean>> {
