@@ -91,24 +91,34 @@ export async function handleMessage(params: {
 
 export function registerEventHandlers(app: App, db: Database): void {
   app.event("app_mention", async ({ event, client, context }) => {
-    const workspaceId = context.workspaceId as string | undefined;
-    if (!workspaceId) return; // set by the composition root's authorize step, see Task 12
+    const teamId = context.teamId as string | undefined;
+    if (!teamId) return;
+    const workspace = await db.query.workspaces.findFirst({
+      where: (w, { eq: eqCol }) => eqCol(w.slackTeamId, teamId),
+    });
+    if (!workspace) return;
+
     await handleAppMention({
       db,
       client,
       botToken: context.botToken as string,
-      workspaceId,
+      workspaceId: workspace.id,
       event,
     });
   });
 
   app.message(async ({ message, context }) => {
-    const workspaceId = context.workspaceId as string | undefined;
-    if (!workspaceId || message.subtype !== undefined) return;
+    const teamId = context.teamId as string | undefined;
+    if (!teamId || message.subtype !== undefined) return;
+    const workspace = await db.query.workspaces.findFirst({
+      where: (w, { eq: eqCol }) => eqCol(w.slackTeamId, teamId),
+    });
+    if (!workspace) return;
+
     await handleMessage({
       db,
       botToken: context.botToken as string,
-      workspaceId,
+      workspaceId: workspace.id,
       message: message as unknown as MessageLikeEvent,
     });
   });
