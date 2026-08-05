@@ -1495,7 +1495,7 @@ Expected: FAIL — module does not exist.
 ```typescript
 // src/slack/backfill.ts
 import { and, eq } from "drizzle-orm";
-import type { WebClient } from "@slack/bolt";
+import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
 import { namespaces, messages } from "../db/schema.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
@@ -1722,7 +1722,8 @@ Expected: FAIL — module does not exist.
 ```typescript
 // src/slack/events.ts
 import { and, eq } from "drizzle-orm";
-import type { App, WebClient } from "@slack/bolt";
+import type { App } from "@slack/bolt";
+import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
 import { namespaces, messages } from "../db/schema.js";
 import { backfillThread } from "./backfill.js";
