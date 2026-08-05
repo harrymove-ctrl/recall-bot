@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import type { WebClient } from "@slack/bolt";
+import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
 import { namespaces, messages } from "../db/schema.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
