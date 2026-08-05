@@ -78,7 +78,8 @@ describe("captureSlackFile", () => {
     expect(fileRow.bucketKey).toContain(message.id);
   });
 
-  it("marks the file row failed when the download throws", async () => {
+  it("marks the file row failed and logs the file/message ids when the download throws", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "Server Error" }));
     const message = await seedMessage();
 
@@ -96,5 +97,12 @@ describe("captureSlackFile", () => {
 
     const [fileRow] = await db.select().from(files).where(eq(files.messageId, message.id));
     expect(fileRow.status).toBe("failed");
+
+    // a swallowed capture failure is invisible without this log
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const logged = consoleError.mock.calls[0].join(" ");
+    expect(logged).toContain("F2");
+    expect(logged).toContain(message.id);
+    consoleError.mockRestore();
   });
 });

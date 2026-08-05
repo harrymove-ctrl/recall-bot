@@ -14,7 +14,17 @@ function requireEnv(name: string): string {
   return value;
 }
 
+/**
+ * Object-storage configuration is validated at boot alongside the Slack vars. The S3 client in
+ * src/storage/bucket.ts falls back to empty-string credentials, so without this check a deploy
+ * that is missing them starts up healthy and then silently fails every single file upload at
+ * capture time — the worst possible place to discover the misconfiguration.
+ */
+const REQUIRED_BUCKET_ENV_VARS = ["BUCKET", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "ENDPOINT"] as const;
+
 export function buildApp(database: Database): Express {
+  for (const name of REQUIRED_BUCKET_ENV_VARS) requireEnv(name);
+
   const app = express();
 
   app.get("/healthz", (_req, res) => {

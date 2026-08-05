@@ -40,7 +40,14 @@ export async function captureSlackFile(params: CaptureSlackFileParams): Promise<
     const bucketKey = `messages/${messageId}/${file.id}-${file.name}`;
     await putFile(bucketKey, bytes, file.mimetype);
     await db.update(files).set({ bucketKey, status: "stored" }).where(eq(files.id, fileRow.id));
-  } catch {
+  } catch (error) {
+    // Capture failures are swallowed on purpose (one bad attachment must not abort a backfill),
+    // so this log is the only signal that anything went wrong — it has to carry enough to
+    // identify the row: the Slack file id, its name, and the message it belongs to.
+    console.error(
+      `captureSlackFile: failed to capture Slack file ${file.id} (${file.name}) for message ${messageId}:`,
+      error,
+    );
     await db.update(files).set({ status: "failed" }).where(eq(files.id, fileRow.id));
   }
 }
