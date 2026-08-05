@@ -1,6 +1,7 @@
 import type { App } from "@slack/bolt";
 import type { Database } from "../db/client.js";
 import { users } from "../db/schema.js";
+import { resolveWorkspaceByTeamId } from "../db/workspaces.js";
 import { generateDelegateKey } from "../keys/delegateKeys.js";
 
 export async function issueDelegateKey(db: Database, workspaceId: string, slackUserId: string): Promise<string> {
@@ -22,9 +23,7 @@ export function registerRecallKeyCommand(app: App, db: Database): void {
     await ack();
 
     try {
-      const workspaceIdRow = await db.query.workspaces.findFirst({
-        where: (w, { eq: eqCol }) => eqCol(w.slackTeamId, command.team_id),
-      });
+      const workspaceIdRow = await resolveWorkspaceByTeamId(db, command.team_id);
       if (!workspaceIdRow) {
         logger.error(`No workspace found for team ${command.team_id}`);
         await respond({

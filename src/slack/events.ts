@@ -3,6 +3,7 @@ import type { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
 import { namespaces, messages } from "../db/schema.js";
+import { resolveWorkspaceByTeamId } from "../db/workspaces.js";
 import { backfillThread } from "./backfill.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
 
@@ -89,13 +90,31 @@ export async function handleMessage(params: {
   }
 }
 
+/**
+ * Slack tags most non-plain messages with a `subtype`, and only a couple of those are real
+ * user content we want to capture:
+ *
+ *   - `undefined`         — an ordinary message
+ *   - `file_share`        — a message whose payload is an attachment (this is how EVERY file upload arrives)
+ *   - `thread_broadcast`  — a thread reply posted with "also send to channel"
+ *
+ * Everything else (`bot_message`, `message_changed`, `message_deleted`, `message_replied`,
+ * channel joins/leaves, …) is either not a human authoring a thread reply or a mutation of a
+ * message we already stored, so it is dropped. This is an allow-list on purpose: an unknown
+ * future subtype is dropped rather than captured.
+ */
+const CAPTURABLE_MESSAGE_SUBTYPES = new Set(["file_share", "thread_broadcast"]);
+
+export function isCapturableMessageSubtype(subtype: string | undefined): boolean {
+  if (subtype === undefined) return true;
+  return CAPTURABLE_MESSAGE_SUBTYPES.has(subtype);
+}
+
 export function registerEventHandlers(app: App, db: Database): void {
   app.event("app_mention", async ({ event, client, context }) => {
     const teamId = context.teamId as string | undefined;
     if (!teamId) return;
-    const workspace = await db.query.workspaces.findFirst({
-      where: (w, { eq: eqCol }) => eqCol(w.slackTeamId, teamId),
-    });
+    const workspace = await resolveWorkspaceByTeamId(db, teamId);
     if (!workspace) return;
 
     await handleAppMention({
@@ -109,10 +128,8 @@ export function registerEventHandlers(app: App, db: Database): void {
 
   app.message(async ({ message, context }) => {
     const teamId = context.teamId as string | undefined;
-    if (!teamId || message.subtype !== undefined) return;
-    const workspace = await db.query.workspaces.findFirst({
-      where: (w, { eq: eqCol }) => eqCol(w.slackTeamId, teamId),
-    });
+    if (!teamId || !isCapturableMessageSubtype(message.subtype)) return;
+    const workspace = await resolveWorkspaceByTeamId(db, teamId);
     if (!workspace) return;
 
     await handleMessage({
