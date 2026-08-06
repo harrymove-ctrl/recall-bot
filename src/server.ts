@@ -16,7 +16,7 @@ import { createDashboardApiRouter } from "./dashboard/api.js";
 // src/server.ts (tsx) or the compiled dist/server.js — both sit one level below the
 // project root that ./drizzle lives in.
 const MIGRATIONS_FOLDER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../drizzle");
-const DASHBOARD_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/dashboard");
+const DASHBOARD_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/dashboard-web");
 
 function requireEnv(name: string): string {
   const value = process.env[name];

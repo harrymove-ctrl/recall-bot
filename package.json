@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json && node build-dashboard.mjs",
     "build:dashboard": "node build-dashboard.mjs",
     "start": "node dist/server.js",
+    "pretest": "npm run build:dashboard",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",

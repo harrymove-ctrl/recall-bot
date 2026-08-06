@@ -2,7 +2,7 @@
 import * as esbuild from "esbuild";
 import { cpSync, mkdirSync } from "node:fs";
 
-const outdir = "dist/dashboard";
+const outdir = "dist/dashboard-web";
 mkdirSync(outdir, { recursive: true });
 
 await esbuild.build({
