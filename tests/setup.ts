@@ -19,7 +19,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await db.execute(
-    sql`TRUNCATE TABLE files, messages, namespaces, users, installations, workspaces RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE TABLE files, messages, namespaces, users, installations, workspace_claim_tokens, workspaces RESTART IDENTITY CASCADE`,
   );
 });
 
