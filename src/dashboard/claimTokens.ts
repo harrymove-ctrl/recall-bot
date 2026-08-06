@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull, gt } from "drizzle-orm";
 import type { Database } from "../db/client.js";
 import { workspaceClaimTokens } from "../db/schema.js";
 
@@ -25,15 +25,16 @@ export async function issueClaimToken(
 
 export async function consumeClaimToken(db: Database, plaintext: string): Promise<{ workspaceId: string } | null> {
   const [row] = await db
-    .select()
-    .from(workspaceClaimTokens)
-    .where(eq(workspaceClaimTokens.tokenHash, hashToken(plaintext)));
+    .update(workspaceClaimTokens)
+    .set({ usedAt: new Date() })
+    .where(
+      and(
+        eq(workspaceClaimTokens.tokenHash, hashToken(plaintext)),
+        isNull(workspaceClaimTokens.usedAt),
+        gt(workspaceClaimTokens.expiresAt, new Date()),
+      ),
+    )
+    .returning();
 
-  if (!row) return null;
-  if (row.usedAt) return null;
-  if (row.expiresAt.getTime() < Date.now()) return null;
-
-  await db.update(workspaceClaimTokens).set({ usedAt: new Date() }).where(eq(workspaceClaimTokens.id, row.id));
-
-  return { workspaceId: row.workspaceId };
+  return row ? { workspaceId: row.workspaceId } : null;
 }

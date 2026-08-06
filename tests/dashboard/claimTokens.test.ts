@@ -29,4 +29,14 @@ describe("issueClaimToken / consumeClaimToken", () => {
     const result = await consumeClaimToken(db, plaintext);
     expect(result).toBeNull();
   });
+
+  it("only allows one of two concurrent consumers to succeed", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T3", name: "T" }).returning();
+    const plaintext = await issueClaimToken(db, workspace.id);
+
+    const [first, second] = await Promise.all([consumeClaimToken(db, plaintext), consumeClaimToken(db, plaintext)]);
+    const results = [first, second];
+    expect(results.filter((r) => r !== null)).toHaveLength(1);
+    expect(results.filter((r) => r === null)).toHaveLength(1);
+  });
 });
