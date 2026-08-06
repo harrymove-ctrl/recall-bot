@@ -118,6 +118,19 @@ describe("dashboard API", () => {
     expect(stillUnlabeled.label).toBeNull();
   });
 
+  it("PATCH /namespaces/:id with a non-UUID id returns 404 instead of a DB error", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T4C");
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const patch = await request(app)
+      .patch("/api/dashboard/namespaces/not-a-uuid")
+      .set("Cookie", cookie)
+      .send({ label: "should not work" });
+    expect(patch.status).toBe(404);
+    expect(patch.body.error).toBe("namespace_not_found");
+  });
+
   it("GET /users lists only users with an active key, and revoke-key is idempotent", async () => {
     const app = buildTestApp();
     const workspace = await seedWorkspace("T5");
@@ -144,7 +157,7 @@ describe("dashboard API", () => {
     expect(afterList.body).toHaveLength(0);
   });
 
-  it("a workspace's session cannot revoke another workspace's user key", async () => {
+  it("a workspace's session cannot read or revoke another workspace's user key", async () => {
     const app = buildTestApp();
     const workspaceA = await seedWorkspace("T5A");
     const workspaceB = await seedWorkspace("T5B");
@@ -154,12 +167,25 @@ describe("dashboard API", () => {
       .returning();
     const cookieA = await claimSessionCookie(app, workspaceA.id);
 
+    const list = await request(app).get("/api/dashboard/users").set("Cookie", cookieA);
+    expect(list.body).toHaveLength(0);
+
     const revoke = await request(app).post(`/api/dashboard/users/${userB.id}/revoke-key`).set("Cookie", cookieA);
     expect(revoke.status).toBe(200);
     expect(revoke.body.revoked).toBe(false);
 
     const [stillHasKey] = await db.select().from(users).where(eq(users.id, userB.id));
     expect(stillHasKey.delegateKeyHash).not.toBeNull();
+  });
+
+  it("POST /users/:id/revoke-key with a non-UUID id is a no-op instead of a DB error", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T5C");
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const revoke = await request(app).post("/api/dashboard/users/not-a-uuid/revoke-key").set("Cookie", cookie);
+    expect(revoke.status).toBe(200);
+    expect(revoke.body).toEqual({ ok: true, revoked: false });
   });
 
   it("POST /logout clears the cookie", async () => {

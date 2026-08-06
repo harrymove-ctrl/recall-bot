@@ -9,6 +9,12 @@ import { DASHBOARD_COOKIE_NAME, requireDashboardSession, type DashboardRequest }
 
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
+// All id columns are Postgres `uuid`. Passing a non-UUID string straight into eq(...) makes
+// Postgres raise 22P02 ("invalid input syntax for type uuid"), which is unhandled and would
+// otherwise surface as an Express 500 (leaking a stack trace / failed SQL in non-production).
+// Guard with a shape check so a malformed id is treated the same as a well-formed-but-missing one.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function createDashboardApiRouter(db: Database, sessionSecret: string): Router {
   const router = Router();
   const auth = requireDashboardSession(sessionSecret);
@@ -89,6 +95,10 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
     // widens ParamsDictionary values to `string | string[]` to account for other route patterns
     // (e.g. repeated segments), so it must be narrowed explicitly here for drizzle's eq().
     const namespaceId = String(req.params.id);
+    if (!UUID_RE.test(namespaceId)) {
+      res.status(404).json({ error: "namespace_not_found" });
+      return;
+    }
     const [row] = await db
       .update(namespaces)
       .set(update)
@@ -116,6 +126,10 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
     // revoked: false — matching on id/workspaceId alone would return a row (and report
     // revoked: true) every time, since the row itself always still exists.
     const userId = String(req.params.id);
+    if (!UUID_RE.test(userId)) {
+      res.json({ ok: true, revoked: false });
+      return;
+    }
     const [row] = await db
       .update(users)
       .set({ delegateKeyHash: null, updatedAt: new Date() })
