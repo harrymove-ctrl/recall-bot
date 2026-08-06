@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { NamespaceDetail } from "./NamespaceDetail";
 
 interface WorkspaceInfo {
   name: string;
@@ -59,7 +60,7 @@ function ClaimView() {
   return <p>Setting up your dashboard…</p>;
 }
 
-function NoSession() {
+export function NoSession() {
   return <p>No active session — check your Slack DM for the dashboard setup link.</p>;
 }
 
@@ -173,9 +174,42 @@ function Dashboard() {
   );
 }
 
+const GRID_MODE_KEY = "recall_dashboard_grid_mode";
+
+function useGridMode(): [boolean, () => void] {
+  const [enabled, setEnabled] = useState(() => {
+    const stored = localStorage.getItem(GRID_MODE_KEY);
+    return stored === null ? true : stored === "true";
+  });
+  const toggle = () => {
+    setEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem(GRID_MODE_KEY, String(next));
+      return next;
+    });
+  };
+  return [enabled, toggle];
+}
+
 export function App() {
-  if (window.location.pathname === "/dashboard/claim") {
-    return <ClaimView />;
+  const [gridMode, toggleGridMode] = useGridMode();
+  const path = window.location.pathname;
+
+  let view: React.ReactElement;
+  if (path === "/dashboard/claim") {
+    view = <ClaimView />;
+  } else {
+    const namespaceMatch = path.match(/^\/dashboard\/namespaces\/([0-9a-fA-F-]+)$/);
+    view = namespaceMatch ? <NamespaceDetail namespaceId={namespaceMatch[1]} /> : <Dashboard />;
   }
-  return <Dashboard />;
+
+  return (
+    <>
+      {gridMode && <div className="grid-overlay" />}
+      <button className="grid-toggle" onClick={toggleGridMode}>
+        Grid Mode: {gridMode ? "On" : "Off"}
+      </button>
+      <div className="page">{view}</div>
+    </>
+  );
 }
