@@ -10,11 +10,13 @@ import { createSlackReceiver, createSlackApp } from "./slack/receiver.js";
 import { registerEventHandlers } from "./slack/events.js";
 import { registerRecallKeyCommand } from "./slack/recallKeyCommand.js";
 import { mountMcpServer } from "./mcp/server.js";
+import { createDashboardApiRouter } from "./dashboard/api.js";
 
 // Resolved from this file rather than process.cwd() so it works whether this runs from
 // src/server.ts (tsx) or the compiled dist/server.js — both sit one level below the
 // project root that ./drizzle lives in.
 const MIGRATIONS_FOLDER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../drizzle");
+const DASHBOARD_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/dashboard");
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -46,12 +48,34 @@ export function buildApp(database: Database): Express {
     clientId: requireEnv("SLACK_CLIENT_ID"),
     clientSecret: requireEnv("SLACK_CLIENT_SECRET"),
     stateSecret: requireEnv("SLACK_STATE_SECRET"),
+    publicBaseUrl: requireEnv("PUBLIC_BASE_URL"),
   });
   const slackApp = createSlackApp(receiver);
   registerEventHandlers(slackApp, database);
   registerRecallKeyCommand(slackApp, database);
 
   app.use(express.json());
+
+  const dashboardSessionSecret = requireEnv("DASHBOARD_SESSION_SECRET");
+  // These two exact-path routes are registered ahead of the express.static mount below because
+  // serve-static's default directory-index handling 301-redirects a bare "/dashboard" request to
+  // "/dashboard/" instead of serving index.html directly — registering first lets both the root
+  // and the claim path serve the SPA shell without that redirect hop.
+  //
+  // sendFile is called with `{ root: DASHBOARD_DIST }` rather than a pre-joined absolute path: the
+  // underlying `send` module's dotfile check walks every segment of the path it's given, and only
+  // scopes that check to the part relative to `root` when `root` is passed separately. Without it,
+  // a project checked out under a dot-prefixed directory (e.g. a `.worktrees/<branch>` git
+  // worktree) would have the file rejected as a "dotfile" and 404 even though it exists.
+  app.get("/dashboard", (_req, res) => {
+    res.sendFile("index.html", { root: DASHBOARD_DIST });
+  });
+  app.get("/dashboard/claim", (_req, res) => {
+    res.sendFile("index.html", { root: DASHBOARD_DIST });
+  });
+  app.use("/dashboard", express.static(DASHBOARD_DIST));
+  app.use("/api/dashboard", createDashboardApiRouter(database, dashboardSessionSecret));
+
   mountMcpServer(app, database);
 
   return app;

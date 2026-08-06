@@ -43,4 +43,21 @@ describe("buildApp (wired)", () => {
       expect(() => buildApp(db)).toThrow(`Missing required environment variable: ${name}`);
     },
   );
+
+  it("serves the dashboard static bundle and claim page", async () => {
+    const app = buildApp(db);
+    const indexRes = await request(app).get("/dashboard");
+    expect(indexRes.status).toBe(200);
+    expect(indexRes.text).toContain("bundle.js");
+
+    const claimRes = await request(app).get("/dashboard/claim");
+    expect(claimRes.status).toBe(200);
+    expect(claimRes.text).toContain("bundle.js");
+  });
+
+  it("exposes /api/dashboard/me and rejects unauthenticated calls", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/api/dashboard/me");
+    expect(res.status).toBe(401);
+  });
 });
