@@ -67,7 +67,7 @@ export function createSlackReceiver(params: SlackReceiverParams): ExpressReceive
         },
         failureAsync: async (error, _options, _req, res) => {
           console.error("Slack OAuth install failed:", error);
-          (res as import("express").Response).redirect("/dashboard");
+          (res as import("express").Response).redirect("/dashboard?install_error=1");
         },
       },
     },

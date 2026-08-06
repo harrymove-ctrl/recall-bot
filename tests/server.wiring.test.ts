@@ -50,6 +50,16 @@ describe("buildApp (wired)", () => {
     expect(indexRes.status).toBe(200);
     expect(indexRes.text).toContain("bundle.js");
 
+    // The script tag must resolve correctly when the page is served from the exact "/dashboard"
+    // path (no trailing slash) — a relative "./bundle.js" would resolve to "/bundle.js", which
+    // nothing serves. Extract the actual src and confirm that exact URL is fetchable.
+    const scriptSrcMatch = indexRes.text.match(/<script src="([^"]+)"/);
+    expect(scriptSrcMatch).not.toBeNull();
+    const scriptSrc = scriptSrcMatch![1];
+    expect(scriptSrc).toBe("/dashboard/bundle.js");
+    const bundleRes = await request(app).get(scriptSrc);
+    expect(bundleRes.status).toBe(200);
+
     const claimRes = await request(app).get("/dashboard/claim");
     expect(claimRes.status).toBe(200);
     expect(claimRes.text).toContain("bundle.js");

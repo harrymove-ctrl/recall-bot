@@ -34,7 +34,7 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
 
     res.cookie(DASHBOARD_COOKIE_NAME, createSessionCookie(result.workspaceId, sessionSecret, SESSION_MAX_AGE_MS), {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       maxAge: SESSION_MAX_AGE_MS,
       path: "/",
