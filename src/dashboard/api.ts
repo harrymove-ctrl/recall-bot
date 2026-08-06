@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { Response } from "express";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import type { Database } from "../db/client.js";
-import { installations, namespaces, users, workspaces } from "../db/schema.js";
+import { installations, namespaces, users, workspaces, messages, files } from "../db/schema.js";
 import { consumeClaimToken } from "./claimTokens.js";
 import { createSessionCookie } from "./session.js";
 import { DASHBOARD_COOKIE_NAME, requireDashboardSession, type DashboardRequest } from "./auth.js";
@@ -76,6 +76,50 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
         label: n.label,
         status: n.status,
         createdAt: n.createdAt,
+      })),
+    );
+  });
+
+  router.get("/namespaces/:id/messages", auth, async (req: DashboardRequest, res: Response) => {
+    const namespaceId = String(req.params.id);
+    if (!UUID_RE.test(namespaceId)) {
+      res.status(404).json({ error: "namespace_not_found" });
+      return;
+    }
+
+    const [namespace] = await db
+      .select()
+      .from(namespaces)
+      .where(and(eq(namespaces.id, namespaceId), eq(namespaces.workspaceId, req.workspaceId!)));
+    if (!namespace) {
+      res.status(404).json({ error: "namespace_not_found" });
+      return;
+    }
+
+    const messageRows = await db.select().from(messages).where(eq(messages.namespaceId, namespaceId)).orderBy(messages.slackTs);
+
+    const messageIds = messageRows.map((m) => m.id);
+    const fileRows = messageIds.length > 0 ? await db.select().from(files).where(inArray(files.messageId, messageIds)) : [];
+    const filesByMessageId = new Map<string, typeof fileRows>();
+    for (const f of fileRows) {
+      const list = filesByMessageId.get(f.messageId) ?? [];
+      list.push(f);
+      filesByMessageId.set(f.messageId, list);
+    }
+
+    res.json(
+      messageRows.map((m) => ({
+        id: m.id,
+        slackUserId: m.slackUserId,
+        text: m.text,
+        slackTs: m.slackTs,
+        createdAt: m.createdAt,
+        files: (filesByMessageId.get(m.id) ?? []).map((f) => ({
+          id: f.id,
+          originalName: f.originalName,
+          mimeType: f.mimeType,
+          status: f.status,
+        })),
       })),
     );
   });

@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 import { eq } from "drizzle-orm";
 import { db } from "../../src/db/client.js";
-import { workspaces, installations, namespaces, users } from "../../src/db/schema.js";
+import { workspaces, installations, namespaces, users, messages, files } from "../../src/db/schema.js";
 import { issueClaimToken } from "../../src/dashboard/claimTokens.js";
 import { hashDelegateKey } from "../../src/keys/delegateKeys.js";
 import { createDashboardApiRouter } from "../../src/dashboard/api.js";
@@ -186,6 +186,52 @@ describe("dashboard API", () => {
     const revoke = await request(app).post("/api/dashboard/users/not-a-uuid/revoke-key").set("Cookie", cookie);
     expect(revoke.status).toBe(200);
     expect(revoke.body).toEqual({ ok: true, revoked: false });
+  });
+
+  it("GET /namespaces/:id/messages returns the captured thread in order, with attached files", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T7");
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    const [firstMessage] = await db
+      .insert(messages)
+      .values({ namespaceId: namespace.id, slackUserId: "U1", text: "first", slackTs: "1700000000.000100" })
+      .returning();
+    await db
+      .insert(messages)
+      .values({ namespaceId: namespace.id, slackUserId: "U2", text: "second", slackTs: "1700000001.000200" });
+    await db.insert(files).values({
+      messageId: firstMessage.id,
+      originalName: "diagram.png",
+      mimeType: "image/png",
+      status: "stored",
+    });
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const res = await request(app).get(`/api/dashboard/namespaces/${namespace.id}/messages`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0].text).toBe("first");
+    expect(res.body[0].files).toHaveLength(1);
+    expect(res.body[0].files[0].originalName).toBe("diagram.png");
+    expect(res.body[1].text).toBe("second");
+    expect(res.body[1].files).toHaveLength(0);
+  });
+
+  it("GET /namespaces/:id/messages returns 404 for a namespace owned by another workspace", async () => {
+    const app = buildTestApp();
+    const workspaceA = await seedWorkspace("T8A");
+    const workspaceB = await seedWorkspace("T8B");
+    const [namespaceB] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspaceB.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    const cookieA = await claimSessionCookie(app, workspaceA.id);
+
+    const res = await request(app).get(`/api/dashboard/namespaces/${namespaceB.id}/messages`).set("Cookie", cookieA);
+    expect(res.status).toBe(404);
   });
 
   it("POST /logout clears the cookie", async () => {
