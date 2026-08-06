@@ -132,6 +132,7 @@ function Dashboard() {
             <th>Status</th>
             <th>Created</th>
             <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -143,6 +144,9 @@ function Dashboard() {
               <td>{n.channelId}</td>
               <td>{n.status}</td>
               <td>{new Date(n.createdAt).toLocaleDateString()}</td>
+              <td>
+                <a href={`/dashboard/namespaces/${n.id}`}>View</a>
+              </td>
               <td>{n.status !== "archived" && <button onClick={() => archiveNamespace(n.id)}>Archive</button>}</td>
             </tr>
           ))}

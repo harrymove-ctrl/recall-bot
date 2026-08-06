@@ -73,6 +73,9 @@ export function buildApp(database: Database): Express {
   app.get("/dashboard/claim", (_req, res) => {
     res.sendFile("index.html", { root: DASHBOARD_DIST });
   });
+  app.get("/dashboard/namespaces/:id", (_req, res) => {
+    res.sendFile("index.html", { root: DASHBOARD_DIST });
+  });
   app.use("/dashboard", express.static(DASHBOARD_DIST));
   app.use("/api/dashboard", createDashboardApiRouter(database, dashboardSessionSecret));
 
