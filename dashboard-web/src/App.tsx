@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { NamespaceDetail } from "./NamespaceDetail";
 
 interface WorkspaceInfo {
@@ -195,7 +195,7 @@ export function App() {
   const [gridMode, toggleGridMode] = useGridMode();
   const path = window.location.pathname;
 
-  let view: React.ReactElement;
+  let view: JSX.Element;
   if (path === "/dashboard/claim") {
     view = <ClaimView />;
   } else {
