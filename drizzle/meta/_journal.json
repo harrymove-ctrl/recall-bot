@@ -8,6 +8,13 @@
       "when": 1785957043006,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785997790163,
+      "tag": "0001_dashboard_claim_tokens_and_namespace_label",
+      "breakpoints": true
     }
   ]
 }
