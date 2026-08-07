@@ -6,8 +6,14 @@ import { namespaceLinearIssues } from "../db/schema.js";
 // needing to strip Slack's <...|...> syntax first. Deliberately does NOT match non-issue
 // linear.app URLs (e.g. linear.app/mysten-labs/settings) since those lack the /issue/<KEY>-<n>
 // segment.
+//
+// The leading (?<!...) lookbehind requires "linear.app" not be directly preceded by an
+// alnum/hyphen character, so a mid-string substring like "notlinear.app" or "fake-linear.app"
+// never matches. The slug group is bounded to 64 chars (matching the workspaceSlug column's
+// varchar(64)) rather than unbounded `*`, so a long run of slug-like characters with no valid
+// /issue/<KEY>-<n> segment can't cause backtracking proportional to input length.
 const LINEAR_ISSUE_URL_RE =
-  /linear\.app\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)\/issue\/([a-zA-Z][a-zA-Z0-9]{1,9}-\d+)/g;
+  /(?<![a-zA-Z0-9-])linear\.app\/([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,62}[a-zA-Z0-9])?)\/issue\/([a-zA-Z][a-zA-Z0-9]{1,9}-\d+)/g;
 
 export interface LinearIssueRef {
   workspaceSlug: string;

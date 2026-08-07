@@ -43,6 +43,11 @@ describe("extractLinearIssueRefs", () => {
   it("returns [] for plain text with no link", () => {
     expect(extractLinearIssueRefs("just talking about the launch")).toEqual([]);
   });
+
+  it("does not match linear.app as a mid-string substring", () => {
+    expect(extractLinearIssueRefs("see notlinear.app/mysten-labs/issue/WALM-297")).toEqual([]);
+    expect(extractLinearIssueRefs("see fake-linear.app/mysten-labs/issue/WALM-297")).toEqual([]);
+  });
 });
 
 describe("linearIssueUrl", () => {
