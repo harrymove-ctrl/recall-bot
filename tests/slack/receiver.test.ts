@@ -38,4 +38,23 @@ describe("createSlackReceiver", () => {
       }),
     ).not.toThrow();
   });
+
+  it("redirects OAuth failures to the landing page with install_error=1", async () => {
+    const app = express();
+    const receiver = createSlackReceiver({
+      db,
+      app,
+      signingSecret: "test-signing-secret",
+      clientId: "test-client-id",
+      clientSecret: "test-client-secret",
+      stateSecret: "test-state-secret-test-state-secret",
+      publicBaseUrl: "https://example.test",
+    });
+    createSlackApp(receiver);
+
+    const res = await request(app).get("/slack/oauth_redirect");
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    expect(res.headers.location).toBe("/?install_error=1");
+  });
 });

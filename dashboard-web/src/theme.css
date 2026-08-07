@@ -309,3 +309,32 @@ a:hover {
 .analytics-bar-fill {
   fill: var(--color-accent);
 }
+
+.getting-started-panel {
+  border: 1px solid var(--color-border);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.getting-started-steps {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.getting-started-steps li {
+  margin-bottom: var(--space-2);
+}
+
+.getting-started-collapsed {
+  margin: var(--space-2) 0;
+}
+
+.getting-started-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}

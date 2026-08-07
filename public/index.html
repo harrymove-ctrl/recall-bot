@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>recall-bot — Turn threads into memory</title>
+  <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-surface: #fafafa;
+      --color-text: #111111;
+      --color-text-muted: #666666;
+      --color-border: #dddddd;
+      --color-accent: #2563eb;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 16px;
+      --space-4: 24px;
+      --space-5: 40px;
+      --font-serif: Georgia, "Times New Roman", serif;
+      --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-weight: 400;
+      margin: 0 0 var(--space-2) 0;
+      font-size: 28px;
+    }
+
+    h2 {
+      font-family: var(--font-serif);
+      font-weight: 400;
+      font-size: 18px;
+      margin: var(--space-5) 0 var(--space-3) 0;
+    }
+
+    a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: var(--space-5) var(--space-4);
+    }
+
+    #install-error {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: var(--space-3);
+      margin-bottom: var(--space-4);
+      border-radius: 3px;
+    }
+
+    .hero {
+      margin-bottom: var(--space-5);
+    }
+
+    .hero-subline {
+      color: var(--color-text-muted);
+      margin: var(--space-2) 0 var(--space-4) 0;
+      font-size: 16px;
+    }
+
+    .cta-section {
+      display: flex;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+      align-items: flex-start;
+    }
+
+    .cta-button-wrap {
+      flex-shrink: 0;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: var(--color-accent);
+      color: white;
+      padding: var(--space-2) var(--space-3);
+      border-radius: 3px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .cta-button:hover {
+      opacity: 0.9;
+      text-decoration: none;
+    }
+
+    .admin-callout {
+      border: 1px solid var(--color-border);
+      padding: var(--space-3);
+      background: var(--color-surface);
+      border-radius: 3px;
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .steps {
+      margin-bottom: var(--space-5);
+    }
+
+    .step {
+      margin-bottom: var(--space-4);
+      padding-left: var(--space-3);
+      position: relative;
+    }
+
+    .step::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-weight: 600;
+      color: var(--color-accent);
+    }
+
+    .step-title {
+      font-weight: 500;
+      margin-bottom: var(--space-1);
+    }
+
+    .step-description {
+      color: var(--color-text-muted);
+    }
+
+    .footer {
+      border-top: 1px solid var(--color-border);
+      padding-top: var(--space-4);
+      color: var(--color-text-muted);
+      font-size: 12px;
+    }
+
+    .scopes-list {
+      list-style: none;
+      padding: 0;
+      margin: var(--space-2) 0 0 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .scopes-list li {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: var(--space-1) var(--space-2);
+      border-radius: 3px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div id="install-error" hidden></div>
+
+    <div class="hero">
+      <h1>Turn any Slack thread into memory a coding agent can recall.</h1>
+      <p class="hero-subline">Tag @recall-bot to capture important threads, then let your coding agent search and retrieve them via MCP.</p>
+    </div>
+
+    <div class="cta-section">
+      <div class="cta-button-wrap">
+        <a href="/slack/install" class="cta-button">Add to Slack</a>
+      </div>
+      <div class="admin-callout">
+        Installing requires Slack workspace-admin permission or approval from whoever manages apps in your workspace. If that's not you, send this page to them — nothing is installed or configured until it clears Slack's own approval screen.
+      </div>
+    </div>
+
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step" data-step="1.">
+        <div class="step-title">A workspace admin approves the requested scopes</div>
+        <div class="step-description">Your workspace administrator reviews and approves the permissions recall-bot needs to read threads and send you setup instructions.</div>
+      </div>
+      <div class="step" data-step="2.">
+        <div class="step-title">You get a one-time Slack DM with a dashboard setup link</div>
+        <div class="step-description">After approval, recall-bot sends you a direct message containing a link to set up your personal dashboard and connect your coding agent.</div>
+      </div>
+      <div class="step" data-step="3.">
+        <div class="step-title">Tag @recall-bot on any thread to capture it, or run /recall-key to get a delegate key</div>
+        <div class="step-description">Capture important threads by tagging the bot. Run /recall-key to get a delegate key that lets your coding agent connect via MCP and search or retrieve any captured thread for context-aware development.</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>Requested OAuth scopes</strong></p>
+      <!-- source: src/slack/receiver.ts -->
+      <ul class="scopes-list">
+        <li>app_mentions:read</li>
+        <li>channels:history</li>
+        <li>groups:history</li>
+        <li>im:history</li>
+        <li>mpim:history</li>
+        <li>chat:write</li>
+        <li>im:write</li>
+        <li>files:read</li>
+        <li>commands</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    if (new URLSearchParams(window.location.search).get("install_error") === "1") {
+      var el = document.getElementById("install-error");
+      el.hidden = false;
+      el.textContent =
+        "Installation didn't complete — you may need workspace-admin approval, or the install was cancelled.";
+    }
+  </script>
+</body>
+</html>
