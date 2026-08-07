@@ -18,6 +18,7 @@ import { createMeApiRouter } from "./dashboard/meApi.js";
 // project root that ./drizzle lives in.
 const MIGRATIONS_FOLDER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../drizzle");
 const DASHBOARD_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/dashboard-web");
+const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public");
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -40,6 +41,10 @@ export function buildApp(database: Database): Express {
 
   app.get("/healthz", (_req, res) => {
     res.status(200).json({ ok: true });
+  });
+
+  app.get("/", (_req, res) => {
+    res.sendFile("index.html", { root: PUBLIC_DIR });
   });
 
   const publicBaseUrl = requireEnv("PUBLIC_BASE_URL"); // captured once, reused below
