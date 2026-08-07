@@ -218,11 +218,20 @@ function SpringTab({
               viewBox={`0 0 ${surfaceWidth} ${RAIL_HEIGHT + PANEL_RADIUS}`}
               preserveAspectRatio="none"
               className={cn(
-                "pointer-events-none absolute inset-x-0 top-0 h-[108px] w-full text-[#fafaf8]",
+                "pointer-events-none absolute inset-x-0 top-0 h-[108px] w-full",
                 dragging ? "z-20" : "z-0",
                 surfaceClassName,
               )}
             >
+              {/* Only one MorphingTabs renders on this dashboard at a time, so a fixed
+                  gradient id is safe — a second instance would need this threaded through
+                  useId() to avoid a collision. */}
+              <defs>
+                <linearGradient id="morphing-tabs-liquid-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="100%" stopColor="#f2f1ec" />
+                </linearGradient>
+              </defs>
               <LiquidSurfacePath
                 key={
                   anyDragging
@@ -266,7 +275,7 @@ function LiquidSurfacePath({
   const path = useTransform(left, (value) =>
     liquidTabPath(value, surfaceWidth),
   );
-  return <motion.path d={path} fill="currentColor" />;
+  return <motion.path d={path} fill="url(#morphing-tabs-liquid-fill)" />;
 }
 
 export function MorphingTabs({
@@ -680,7 +689,7 @@ export function MorphingTabs({
     <div
       ref={rootRef}
       className={cn(
-        "relative isolate min-w-0 overflow-hidden rounded-[2rem] bg-[#292929] text-white",
+        "relative isolate min-w-0 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#333333]/85 via-[#242424]/90 to-[#161616]/90 text-white ring-1 ring-inset ring-white/[0.08] backdrop-blur-2xl",
         classNames?.root,
         className,
       )}
@@ -744,7 +753,7 @@ export function MorphingTabs({
                       className={cn(
                         "absolute inset-x-0 bottom-2 top-0 rounded-[1.25rem] transition-colors duration-200",
                         isDragging
-                          ? "bg-[#3a3a3a]"
+                          ? "bg-gradient-to-b from-white/[0.14] to-white/[0.05]"
                           : "bg-transparent group-hover:bg-white/[0.06]",
                       )}
                     />
