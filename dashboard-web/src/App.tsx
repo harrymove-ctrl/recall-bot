@@ -80,7 +80,14 @@ function ClaimView() {
 }
 
 export function NoSession() {
-  return <p>No active session — check your Slack DM for the dashboard setup link.</p>;
+  return (
+    <div>
+      <p>No active session — check your Slack DM for the dashboard setup link.</p>
+      <p>
+        Missed the DM, or need to reinstall? <a href="/">Visit the recall-bot install page</a>.
+      </p>
+    </div>
+  );
 }
 
 function NamespacesTable({
