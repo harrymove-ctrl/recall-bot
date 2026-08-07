@@ -1,6 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Database } from "../db/client.js";
-import { namespaces, messages } from "../db/schema.js";
+import { messages } from "../db/schema.js";
+import { findParticipantNamespace } from "../db/participation.js";
 import { getSignedDownloadUrl } from "../storage/bucket.js";
 import type { DelegateUser } from "./auth.js";
 
@@ -26,17 +27,8 @@ export async function recallNamespace(
   delegateUser: DelegateUser,
   namespaceId: string,
 ): Promise<RecallResult> {
-  const [namespace] = await db
-    .select()
-    .from(namespaces)
-    .where(and(eq(namespaces.id, namespaceId), eq(namespaces.workspaceId, delegateUser.workspaceId)));
+  const namespace = await findParticipantNamespace(db, delegateUser.workspaceId, delegateUser.slackUserId, namespaceId);
   if (!namespace) return { authorized: false };
-
-  const [participation] = await db
-    .select()
-    .from(messages)
-    .where(and(eq(messages.namespaceId, namespace.id), eq(messages.slackUserId, delegateUser.slackUserId)));
-  if (!participation) return { authorized: false };
 
   const rows = await db.query.messages.findMany({
     where: eq(messages.namespaceId, namespace.id),

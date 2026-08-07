@@ -36,6 +36,13 @@
       "when": 1786091686664,
       "tag": "0004_recall_events",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786097716644,
+      "tag": "0005_user_claim_tokens",
+      "breakpoints": true
     }
   ]
 }

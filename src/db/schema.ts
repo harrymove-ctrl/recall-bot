@@ -49,6 +49,25 @@ export const workspaceClaimTokens = pgTable(
   (t) => [index("workspace_claim_tokens_workspace_id_idx").on(t.workspaceId)],
 );
 
+export const userClaimTokens = pgTable(
+  "user_claim_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("user_claim_tokens_workspace_id_idx").on(t.workspaceId),
+    index("user_claim_tokens_workspace_slack_user_idx").on(t.workspaceId, t.slackUserId),
+  ],
+);
+
 export const users = pgTable(
   "users",
   {

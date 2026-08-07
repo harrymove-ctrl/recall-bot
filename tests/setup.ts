@@ -19,7 +19,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await db.execute(
-    sql`TRUNCATE TABLE recall_events, slack_user_profiles, namespace_linear_issues, files, messages, namespaces, users, installations, workspace_claim_tokens, workspaces RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE TABLE recall_events, slack_user_profiles, namespace_linear_issues, files, messages, namespaces, users, user_claim_tokens, installations, workspace_claim_tokens, workspaces RESTART IDENTITY CASCADE`,
   );
 });
 
