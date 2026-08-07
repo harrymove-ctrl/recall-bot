@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { NoSession } from "./App";
 
 interface MessageFile {
   id: string;
@@ -171,14 +170,24 @@ function DayDivider({ label }: { label: string }) {
   return <div className="day-divider">{label}</div>;
 }
 
-export function NamespaceDetail({ namespaceId }: { namespaceId: string }) {
+export function NamespaceDetail({
+  namespaceId,
+  apiBase = "/api/dashboard",
+  backHref = "/dashboard",
+  unauthorizedMessage = "No active session — check your Slack DM for the dashboard setup link.",
+}: {
+  namespaceId: string;
+  apiBase?: string;
+  backHref?: string;
+  unauthorizedMessage?: string;
+}) {
   const [messages, setMessages] = useState<MessageRow[] | null>(null);
   const [linearIssues, setLinearIssues] = useState<LinearIssueRef[]>([]);
   const [unauthorized, setUnauthorized] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/dashboard/namespaces/${namespaceId}/messages`).then(async (res) => {
+    fetch(`${apiBase}/namespaces/${namespaceId}/messages`).then(async (res) => {
       if (res.status === 401) {
         setUnauthorized(true);
         return;
@@ -191,16 +200,16 @@ export function NamespaceDetail({ namespaceId }: { namespaceId: string }) {
       setMessages(body.messages);
       setLinearIssues(body.linearIssues);
     });
-  }, [namespaceId]);
+  }, [namespaceId, apiBase]);
 
-  if (unauthorized) return <NoSession />;
+  if (unauthorized) return <p>{unauthorizedMessage}</p>;
   if (notFound) return <p>Namespace not found.</p>;
   if (!messages) return <p>Loading…</p>;
 
   return (
     <div>
       <p>
-        <a href="/dashboard">← Back to namespaces</a>
+        <a href={backHref}>← Back to namespaces</a>
       </p>
       <h1>Captured thread</h1>
       {linearIssues.length > 0 && (
