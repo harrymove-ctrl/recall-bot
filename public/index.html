@@ -224,5 +224,14 @@
       </ul>
     </div>
   </div>
+
+  <script>
+    if (new URLSearchParams(window.location.search).get("install_error") === "1") {
+      var el = document.getElementById("install-error");
+      el.hidden = false;
+      el.textContent =
+        "Installation didn't complete — you may need workspace-admin approval, or the install was cancelled.";
+    }
+  </script>
 </body>
 </html>
