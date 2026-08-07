@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 import { eq } from "drizzle-orm";
 import { db } from "../../src/db/client.js";
-import { workspaces, installations, namespaces, users, messages, files } from "../../src/db/schema.js";
+import { workspaces, installations, namespaces, users, messages, files, namespaceLinearIssues } from "../../src/db/schema.js";
 import { issueClaimToken } from "../../src/dashboard/claimTokens.js";
 import { hashDelegateKey } from "../../src/keys/delegateKeys.js";
 import { createDashboardApiRouter } from "../../src/dashboard/api.js";
@@ -212,12 +212,13 @@ describe("dashboard API", () => {
 
     const res = await request(app).get(`/api/dashboard/namespaces/${namespace.id}/messages`).set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
-    expect(res.body[0].text).toBe("first");
-    expect(res.body[0].files).toHaveLength(1);
-    expect(res.body[0].files[0].originalName).toBe("diagram.png");
-    expect(res.body[1].text).toBe("second");
-    expect(res.body[1].files).toHaveLength(0);
+    expect(res.body.messages).toHaveLength(2);
+    expect(res.body.messages[0].text).toBe("first");
+    expect(res.body.messages[0].files).toHaveLength(1);
+    expect(res.body.messages[0].files[0].originalName).toBe("diagram.png");
+    expect(res.body.messages[1].text).toBe("second");
+    expect(res.body.messages[1].files).toHaveLength(0);
+    expect(res.body.linearIssues).toEqual([]);
   });
 
   it("GET /namespaces/:id/messages returns 404 for a namespace owned by another workspace", async () => {
@@ -232,6 +233,70 @@ describe("dashboard API", () => {
 
     const res = await request(app).get(`/api/dashboard/namespaces/${namespaceB.id}/messages`).set("Cookie", cookieA);
     expect(res.status).toBe(404);
+  });
+
+  it("GET /namespaces includes linked Linear issues, deduped, per namespace", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T9");
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    await db.insert(namespaceLinearIssues).values({
+      namespaceId: namespace.id,
+      workspaceSlug: "mysten-labs",
+      issueIdentifier: "WALM-297",
+    });
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const res = await request(app).get("/api/dashboard/namespaces").set("Cookie", cookie);
+    expect(res.body[0].linearIssues).toEqual([
+      { identifier: "WALM-297", url: "https://linear.app/mysten-labs/issue/WALM-297" },
+    ]);
+  });
+
+  it("GET /namespaces/:id/messages includes linked Linear issues in the new response shape", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T10");
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    await db.insert(namespaceLinearIssues).values({
+      namespaceId: namespace.id,
+      workspaceSlug: "mysten-labs",
+      issueIdentifier: "WALM-42",
+    });
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const res = await request(app).get(`/api/dashboard/namespaces/${namespace.id}/messages`).set("Cookie", cookie);
+    expect(res.body.linearIssues).toEqual([
+      { identifier: "WALM-42", url: "https://linear.app/mysten-labs/issue/WALM-42" },
+    ]);
+  });
+
+  it("a workspace's session cannot see another workspace's linked Linear issues via either endpoint", async () => {
+    const app = buildTestApp();
+    const workspaceA = await seedWorkspace("T11A");
+    const workspaceB = await seedWorkspace("T11B");
+    const [namespaceB] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspaceB.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    await db.insert(namespaceLinearIssues).values({
+      namespaceId: namespaceB.id,
+      workspaceSlug: "mysten-labs",
+      issueIdentifier: "WALM-99",
+    });
+    const cookieA = await claimSessionCookie(app, workspaceA.id);
+
+    const list = await request(app).get("/api/dashboard/namespaces").set("Cookie", cookieA);
+    expect(list.body).toHaveLength(0);
+
+    const messagesRes = await request(app)
+      .get(`/api/dashboard/namespaces/${namespaceB.id}/messages`)
+      .set("Cookie", cookieA);
+    expect(messagesRes.status).toBe(404);
   });
 
   it("POST /logout clears the cookie", async () => {

@@ -2,10 +2,11 @@ import { Router } from "express";
 import type { Response } from "express";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import type { Database } from "../db/client.js";
-import { installations, namespaces, users, workspaces, messages, files } from "../db/schema.js";
+import { installations, namespaces, users, workspaces, messages, files, namespaceLinearIssues } from "../db/schema.js";
 import { consumeClaimToken } from "./claimTokens.js";
 import { createSessionCookie } from "./session.js";
 import { DASHBOARD_COOKIE_NAME, requireDashboardSession, type DashboardRequest } from "./auth.js";
+import { linearIssueUrl } from "../slack/linearLinks.js";
 
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
@@ -68,6 +69,19 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
       .from(namespaces)
       .where(eq(namespaces.workspaceId, req.workspaceId!))
       .orderBy(desc(namespaces.createdAt));
+
+    const namespaceIds = rows.map((n) => n.id);
+    const issueRows =
+      namespaceIds.length > 0
+        ? await db.select().from(namespaceLinearIssues).where(inArray(namespaceLinearIssues.namespaceId, namespaceIds))
+        : [];
+    const issuesByNamespaceId = new Map<string, { identifier: string; url: string }[]>();
+    for (const issue of issueRows) {
+      const list = issuesByNamespaceId.get(issue.namespaceId) ?? [];
+      list.push({ identifier: issue.issueIdentifier, url: linearIssueUrl(issue) });
+      issuesByNamespaceId.set(issue.namespaceId, list);
+    }
+
     res.json(
       rows.map((n) => ({
         id: n.id,
@@ -76,6 +90,7 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
         label: n.label,
         status: n.status,
         createdAt: n.createdAt,
+        linearIssues: issuesByNamespaceId.get(n.id) ?? [],
       })),
     );
   });
@@ -107,8 +122,11 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
       filesByMessageId.set(f.messageId, list);
     }
 
-    res.json(
-      messageRows.map((m) => ({
+    const issueRows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespaceId));
+    const linearIssues = issueRows.map((issue) => ({ identifier: issue.issueIdentifier, url: linearIssueUrl(issue) }));
+
+    res.json({
+      messages: messageRows.map((m) => ({
         id: m.id,
         slackUserId: m.slackUserId,
         text: m.text,
@@ -121,7 +139,8 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
           status: f.status,
         })),
       })),
-    );
+      linearIssues,
+    });
   });
 
   router.patch("/namespaces/:id", auth, async (req: DashboardRequest, res: Response) => {
