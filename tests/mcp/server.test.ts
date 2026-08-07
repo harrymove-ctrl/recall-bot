@@ -116,8 +116,14 @@ describe("mountMcpServer", () => {
       await client.connect(transport);
 
       await client.callTool({ name: "recall", arguments: { namespaceId: namespace.id } });
-      // logRecallEvent is fire-and-forget; give its promise a tick to land before asserting.
-      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // logRecallEvent is fire-and-forget from the server's perspective, but it's invoked
+      // synchronously before the tool response is sent, so the mock has already recorded the
+      // call (and the real promise it returned) by the time callTool() resolves. Await that
+      // promise directly instead of guessing with a timeout — a real network round-trip to
+      // Postgres has no fixed duration, so a fixed-tick wait is a race, not a guarantee.
+      const lastCall = vi.mocked(logRecallEvent).mock.results.at(-1);
+      await lastCall?.value;
 
       const rows = await db.select().from(recallEvents).where(eq(recallEvents.namespaceId, namespace.id));
       expect(rows).toHaveLength(1);
