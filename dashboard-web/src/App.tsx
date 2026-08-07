@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NamespaceDetail } from "./NamespaceDetail";
+import { MeClaimView, PersonalDashboard, MeNamespaceDetail } from "./MePage";
 import { MorphingTabs, type MorphingTabsItem } from "./components/motion/morphing-tabs";
 
 interface WorkspaceInfo {
@@ -322,8 +323,15 @@ export function App() {
   const path = window.location.pathname;
 
   let view: JSX.Element;
+  const meNamespaceMatch = path.match(/^\/dashboard\/me\/namespaces\/([0-9a-fA-F-]+)$/);
   if (path === "/dashboard/claim") {
     view = <ClaimView />;
+  } else if (path === "/dashboard/me/claim") {
+    view = <MeClaimView />;
+  } else if (meNamespaceMatch) {
+    view = <MeNamespaceDetail namespaceId={meNamespaceMatch[1]} />;
+  } else if (path === "/dashboard/me") {
+    view = <PersonalDashboard />;
   } else {
     const namespaceMatch = path.match(/^\/dashboard\/namespaces\/([0-9a-fA-F-]+)$/);
     view = namespaceMatch ? <NamespaceDetail namespaceId={namespaceMatch[1]} /> : <Dashboard />;
