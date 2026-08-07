@@ -7,6 +7,7 @@ import { consumeClaimToken } from "./claimTokens.js";
 import { createSessionCookie } from "./session.js";
 import { DASHBOARD_COOKIE_NAME, requireDashboardSession, type DashboardRequest } from "./auth.js";
 import { linearIssueUrl } from "../slack/linearLinks.js";
+import { resolveDisplayNames } from "../slack/userProfiles.js";
 
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
@@ -125,20 +126,28 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
     const issueRows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespaceId));
     const linearIssues = issueRows.map((issue) => ({ identifier: issue.issueIdentifier, url: linearIssueUrl(issue) }));
 
+    const slackUserIds = [...new Set(messageRows.map((m) => m.slackUserId))];
+    const profiles = await resolveDisplayNames(db, req.workspaceId!, slackUserIds);
+
     res.json({
-      messages: messageRows.map((m) => ({
-        id: m.id,
-        slackUserId: m.slackUserId,
-        text: m.text,
-        slackTs: m.slackTs,
-        createdAt: m.createdAt,
-        files: (filesByMessageId.get(m.id) ?? []).map((f) => ({
-          id: f.id,
-          originalName: f.originalName,
-          mimeType: f.mimeType,
-          status: f.status,
-        })),
-      })),
+      messages: messageRows.map((m) => {
+        const profile = profiles.get(m.slackUserId);
+        return {
+          id: m.id,
+          slackUserId: m.slackUserId,
+          displayName: profile?.displayName ?? null,
+          avatarUrl: profile?.avatarUrl ?? null,
+          text: m.text,
+          slackTs: m.slackTs,
+          createdAt: m.createdAt,
+          files: (filesByMessageId.get(m.id) ?? []).map((f) => ({
+            id: f.id,
+            originalName: f.originalName,
+            mimeType: f.mimeType,
+            status: f.status,
+          })),
+        };
+      }),
       linearIssues,
     });
   });
@@ -180,7 +189,22 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
       .select()
       .from(users)
       .where(and(eq(users.workspaceId, req.workspaceId!), isNotNull(users.delegateKeyHash)));
-    res.json(rows.map((u) => ({ id: u.id, slackUserId: u.slackUserId, keyIssuedOrRotatedAt: u.updatedAt })));
+
+    const slackUserIds = rows.map((u) => u.slackUserId);
+    const profiles = await resolveDisplayNames(db, req.workspaceId!, slackUserIds);
+
+    res.json(
+      rows.map((u) => {
+        const profile = profiles.get(u.slackUserId);
+        return {
+          id: u.id,
+          slackUserId: u.slackUserId,
+          displayName: profile?.displayName ?? null,
+          avatarUrl: profile?.avatarUrl ?? null,
+          keyIssuedOrRotatedAt: u.updatedAt,
+        };
+      }),
+    );
   });
 
   router.post("/users/:id/revoke-key", auth, async (req: DashboardRequest, res: Response) => {

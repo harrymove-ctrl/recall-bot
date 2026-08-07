@@ -1,12 +1,27 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { eq } from "drizzle-orm";
 import { db } from "../../src/db/client.js";
-import { workspaces, installations, namespaces, users, messages, files, namespaceLinearIssues } from "../../src/db/schema.js";
+import {
+  workspaces,
+  installations,
+  namespaces,
+  users,
+  messages,
+  files,
+  namespaceLinearIssues,
+  slackUserProfiles,
+} from "../../src/db/schema.js";
 import { issueClaimToken } from "../../src/dashboard/claimTokens.js";
 import { hashDelegateKey } from "../../src/keys/delegateKeys.js";
 import { createDashboardApiRouter } from "../../src/dashboard/api.js";
+
+vi.mock("@slack/web-api", () => ({
+  WebClient: vi.fn().mockImplementation(() => ({
+    users: { info: vi.fn().mockRejectedValue({ data: { error: "missing_scope" } }) },
+  })),
+}));
 
 const SECRET = "test-secret-at-least-this-long";
 
@@ -144,6 +159,8 @@ describe("dashboard API", () => {
     const list = await request(app).get("/api/dashboard/users").set("Cookie", cookie);
     expect(list.body).toHaveLength(1);
     expect(list.body[0].slackUserId).toBe("U1");
+    expect(list.body[0].displayName).toBeNull();
+    expect(list.body[0].avatarUrl).toBeNull();
 
     const revoke = await request(app).post(`/api/dashboard/users/${userWithKey.id}/revoke-key`).set("Cookie", cookie);
     expect(revoke.status).toBe(200);
@@ -214,6 +231,8 @@ describe("dashboard API", () => {
     expect(res.status).toBe(200);
     expect(res.body.messages).toHaveLength(2);
     expect(res.body.messages[0].text).toBe("first");
+    expect(res.body.messages[0].displayName).toBeNull();
+    expect(res.body.messages[0].avatarUrl).toBeNull();
     expect(res.body.messages[0].files).toHaveLength(1);
     expect(res.body.messages[0].files[0].originalName).toBe("diagram.png");
     expect(res.body.messages[1].text).toBe("second");
@@ -297,6 +316,28 @@ describe("dashboard API", () => {
       .get(`/api/dashboard/namespaces/${namespaceB.id}/messages`)
       .set("Cookie", cookieA);
     expect(messagesRes.status).toBe(404);
+  });
+
+  it("a workspace's session never sees a cached name/avatar seeded against another workspace's identical Slack user id", async () => {
+    const app = buildTestApp();
+    const workspaceA = await seedWorkspace("T12A");
+    const workspaceB = await seedWorkspace("T12B");
+    const [namespaceA] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspaceA.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    await db.insert(messages).values({ namespaceId: namespaceA.id, slackUserId: "U1", text: "hi", slackTs: "1.1" });
+    await db.insert(slackUserProfiles).values({
+      workspaceId: workspaceB.id,
+      slackUserId: "U1",
+      displayName: "Bob From Workspace B",
+      avatarUrl: "https://example.com/bob.png",
+      resolvedAt: new Date(),
+    });
+    const cookieA = await claimSessionCookie(app, workspaceA.id);
+
+    const res = await request(app).get(`/api/dashboard/namespaces/${namespaceA.id}/messages`).set("Cookie", cookieA);
+    expect(res.body.messages[0].displayName).toBeNull();
   });
 
   it("POST /logout clears the cookie", async () => {
