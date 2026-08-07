@@ -174,3 +174,30 @@ export const filesRelations = relations(files, ({ one }) => ({
 export const namespaceLinearIssuesRelations = relations(namespaceLinearIssues, ({ one }) => ({
   namespace: one(namespaces, { fields: [namespaceLinearIssues.namespaceId], references: [namespaces.id] }),
 }));
+
+export const slackUserProfiles = pgTable(
+  "slack_user_profiles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    displayName: text("display_name"),
+    avatarUrl: text("avatar_url"),
+    // The moment of the *last attempt*, success or failure. A null displayName with a fresh
+    // resolvedAt IS a cached result — "we tried and got nothing usable" — which is what makes the
+    // staleness policy double as both a cache TTL and a retry backoff with no extra status column.
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("slack_user_profiles_workspace_slack_user_unique").on(t.workspaceId, t.slackUserId),
+    index("slack_user_profiles_workspace_id_idx").on(t.workspaceId),
+  ],
+);
+
+export const slackUserProfilesRelations = relations(slackUserProfiles, ({ one }) => ({
+  workspace: one(workspaces, { fields: [slackUserProfiles.workspaceId], references: [workspaces.id] }),
+}));
