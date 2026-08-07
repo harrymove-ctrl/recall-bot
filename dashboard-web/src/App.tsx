@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NamespaceDetail } from "./NamespaceDetail";
+import { MorphingTabs, type MorphingTabsItem } from "./components/motion/morphing-tabs";
 
 interface WorkspaceInfo {
   name: string;
@@ -64,11 +65,89 @@ export function NoSession() {
   return <p>No active session — check your Slack DM for the dashboard setup link.</p>;
 }
 
+function NamespacesTable({
+  namespaces,
+  onRename,
+  onArchive,
+}: {
+  namespaces: NamespaceRow[];
+  onRename: (id: string, label: string) => void;
+  onArchive: (id: string) => void;
+}) {
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Channel</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {namespaces.map((n) => (
+          <tr key={n.id}>
+            <td>
+              <input defaultValue={n.label ?? ""} placeholder={n.threadTs} onBlur={(e) => onRename(n.id, e.currentTarget.value)} />
+            </td>
+            <td>{n.channelId}</td>
+            <td>{n.status}</td>
+            <td>{new Date(n.createdAt).toLocaleDateString()}</td>
+            <td>
+              <a href={`/dashboard/namespaces/${n.id}`}>View</a>
+            </td>
+            <td>{n.status !== "archived" && <button onClick={() => onArchive(n.id)}>Archive</button>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function UsersTable({ users, onRevoke }: { users: UserRow[]; onRevoke: (id: string) => void }) {
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Slack user</th>
+          <th>Key issued/rotated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {users.map((u) => (
+          <tr key={u.id}>
+            <td>{u.slackUserId}</td>
+            <td>{new Date(u.keyIssuedOrRotatedAt).toLocaleDateString()}</td>
+            <td>
+              <button onClick={() => onRevoke(u.id)}>Revoke</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+const DASHBOARD_TAB_KEY = "recall_dashboard_active_tab";
+
+function useDashboardTab(): [string, (id: string) => void] {
+  const [tab, setTab] = useState(() => localStorage.getItem(DASHBOARD_TAB_KEY) ?? "namespaces");
+  const setAndPersist = (id: string) => {
+    setTab(id);
+    localStorage.setItem(DASHBOARD_TAB_KEY, id);
+  };
+  return [tab, setAndPersist];
+}
+
 function Dashboard() {
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
   const [namespaces, setNamespaces] = useState<NamespaceRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [activeTab, setActiveTab] = useDashboardTab();
 
   const reload = () => {
     fetch("/api/dashboard/me").then((res) => {
@@ -114,6 +193,15 @@ function Dashboard() {
     reload();
   };
 
+  const tabs: MorphingTabsItem[] = [
+    {
+      id: "namespaces",
+      label: "Namespaces",
+      content: <NamespacesTable namespaces={namespaces} onRename={renameNamespace} onArchive={archiveNamespace} />,
+    },
+    { id: "users", label: "Users", content: <UsersTable users={users} onRevoke={revokeKey} /> },
+  ];
+
   return (
     <div>
       <h1>{workspace.name}</h1>
@@ -123,57 +211,12 @@ function Dashboard() {
         {workspace.revoked ? " — REVOKED" : ""}
       </p>
 
-      <h2>Namespaces</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Label</th>
-            <th>Channel</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {namespaces.map((n) => (
-            <tr key={n.id}>
-              <td>
-                <input defaultValue={n.label ?? ""} placeholder={n.threadTs} onBlur={(e) => renameNamespace(n.id, e.currentTarget.value)} />
-              </td>
-              <td>{n.channelId}</td>
-              <td>{n.status}</td>
-              <td>{new Date(n.createdAt).toLocaleDateString()}</td>
-              <td>
-                <a href={`/dashboard/namespaces/${n.id}`}>View</a>
-              </td>
-              <td>{n.status !== "archived" && <button onClick={() => archiveNamespace(n.id)}>Archive</button>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h2>Users with an active delegate key</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Slack user</th>
-            <th>Key issued/rotated</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.slackUserId}</td>
-              <td>{new Date(u.keyIssuedOrRotatedAt).toLocaleDateString()}</td>
-              <td>
-                <button onClick={() => revokeKey(u.id)}>Revoke</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <MorphingTabs
+        items={tabs}
+        value={activeTab}
+        onValueChange={(id) => id && setActiveTab(id)}
+        ariaLabel="Dashboard sections"
+      />
     </div>
   );
 }
