@@ -201,3 +201,26 @@ export const slackUserProfiles = pgTable(
 export const slackUserProfilesRelations = relations(slackUserProfiles, ({ one }) => ({
   workspace: one(workspaces, { fields: [slackUserProfiles.workspaceId], references: [workspaces.id] }),
 }));
+
+export const recallEvents = pgTable(
+  "recall_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    namespaceId: uuid("namespace_id")
+      .notNull()
+      .references(() => namespaces.id, { onDelete: "cascade" }),
+    delegateUserId: uuid("delegate_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("recall_events_namespace_id_idx").on(t.namespaceId),
+    index("recall_events_namespace_id_created_at_idx").on(t.namespaceId, t.createdAt),
+  ],
+);
+
+export const recallEventsRelations = relations(recallEvents, ({ one }) => ({
+  namespace: one(namespaces, { fields: [recallEvents.namespaceId], references: [namespaces.id] }),
+  delegateUser: one(users, { fields: [recallEvents.delegateUserId], references: [users.id] }),
+}));
