@@ -49,18 +49,40 @@ async function upsertProfile(
 }
 
 /**
- * Never throws. A total Slack outage or a still-missing users:read scope degrades every
- * requested id to { displayName: null, avatarUrl: null } — callers render the raw slackUserId
- * they already have, exactly like today.
+ * Never throws, guaranteed. A total Slack outage, a still-missing users:read scope, OR a
+ * transient DB error at any point (the installations lookup, the cache read, any upsert)
+ * degrades every requested id to { displayName: null, avatarUrl: null } — callers render the
+ * raw slackUserId they already have, exactly like today. The DB-error case is caught by the
+ * outer try/catch below rather than by guarding each call individually, since a DB failure
+ * partway through means partial results can't be trusted anyway.
  */
 export async function resolveDisplayNames(
   db: Database,
   workspaceId: string,
   slackUserIds: string[],
 ): Promise<Map<string, ResolvedProfile>> {
-  const result = new Map<string, ResolvedProfile>();
   const uniqueIds = [...new Set(slackUserIds)];
-  if (uniqueIds.length === 0) return result;
+  if (uniqueIds.length === 0) return new Map();
+
+  try {
+    return await resolveDisplayNamesUnguarded(db, workspaceId, uniqueIds);
+  } catch (error) {
+    console.error(
+      `resolveDisplayNames: unexpected failure resolving profiles for workspace ${workspaceId}, falling back to raw ids:`,
+      error,
+    );
+    const fallback = new Map<string, ResolvedProfile>();
+    for (const id of uniqueIds) fallback.set(id, { displayName: null, avatarUrl: null });
+    return fallback;
+  }
+}
+
+async function resolveDisplayNamesUnguarded(
+  db: Database,
+  workspaceId: string,
+  uniqueIds: string[],
+): Promise<Map<string, ResolvedProfile>> {
+  const result = new Map<string, ResolvedProfile>();
 
   const [installation] = await db.select().from(installations).where(eq(installations.workspaceId, workspaceId));
   if (!installation || installation.revokedAt) {

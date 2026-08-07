@@ -124,4 +124,12 @@ describe("resolveDisplayNames", () => {
     expect(result.get("U11")).toEqual({ displayName: null, avatarUrl: null });
     expect(usersInfoMock).not.toHaveBeenCalled();
   });
+
+  it("falls back to raw ids without throwing when the DB query itself fails", async () => {
+    // an invalid UUID makes Postgres itself raise 22P02 on the installations lookup — this
+    // exercises the outer guard against a real DB-level failure, not just a Slack API failure.
+    const result = await resolveDisplayNames(db, "not-a-valid-uuid", ["U12"]);
+    expect(result.get("U12")).toEqual({ displayName: null, avatarUrl: null });
+    expect(usersInfoMock).not.toHaveBeenCalled();
+  });
 });
