@@ -32,6 +32,14 @@ interface UserRow {
   keyIssuedOrRotatedAt: string;
 }
 
+interface AnalyticsRow {
+  namespaceId: string;
+  label: string | null;
+  channelId: string;
+  recallCount: number;
+  lastRecalledAt: string;
+}
+
 function ClaimView() {
   const [status, setStatus] = useState<"claiming" | "error">("claiming");
   const [message, setMessage] = useState("");
@@ -159,6 +167,43 @@ function UsersTable({ users, onRevoke }: { users: UserRow[]; onRevoke: (id: stri
   );
 }
 
+function AnalyticsTable({ analytics }: { analytics: AnalyticsRow[] }) {
+  const maxCount = Math.max(1, ...analytics.map((a) => a.recallCount));
+  if (analytics.length === 0) return <p>No recall activity yet.</p>;
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Namespace</th>
+          <th>Channel</th>
+          <th>Recalls</th>
+          <th>Last recalled</th>
+        </tr>
+      </thead>
+      <tbody>
+        {analytics.map((a) => (
+          <tr key={a.namespaceId}>
+            <td>
+              <a href={`/dashboard/namespaces/${a.namespaceId}`}>{a.label ?? a.namespaceId}</a>
+            </td>
+            <td>{a.channelId}</td>
+            <td>
+              <span className="analytics-bar-wrap">
+                <svg className="analytics-bar" width="60" height="10" aria-hidden="true">
+                  <rect width="60" height="10" className="analytics-bar-track" />
+                  <rect width={(a.recallCount / maxCount) * 60} height="10" className="analytics-bar-fill" />
+                </svg>
+                {a.recallCount}
+              </span>
+            </td>
+            <td>{new Date(a.lastRecalledAt).toLocaleString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 const DASHBOARD_TAB_KEY = "recall_dashboard_active_tab";
 
 function useDashboardTab(): [string, (id: string) => void] {
@@ -174,6 +219,7 @@ function Dashboard() {
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
   const [namespaces, setNamespaces] = useState<NamespaceRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsRow[]>([]);
   const [unauthorized, setUnauthorized] = useState(false);
   const [activeTab, setActiveTab] = useDashboardTab();
 
@@ -191,6 +237,9 @@ function Dashboard() {
     fetch("/api/dashboard/users")
       .then((res) => (res.ok ? res.json() : []))
       .then(setUsers);
+    fetch("/api/dashboard/analytics")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setAnalytics);
   };
 
   useEffect(reload, []);
@@ -228,6 +277,7 @@ function Dashboard() {
       content: <NamespacesTable namespaces={namespaces} onRename={renameNamespace} onArchive={archiveNamespace} />,
     },
     { id: "users", label: "Users", content: <UsersTable users={users} onRevoke={revokeKey} /> },
+    { id: "analytics", label: "Analytics", content: <AnalyticsTable analytics={analytics} /> },
   ];
 
   return (
