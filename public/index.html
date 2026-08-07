@@ -180,7 +180,7 @@
 
     <div class="hero">
       <h1>Turn any Slack thread into memory a coding agent can recall.</h1>
-      <p class="hero-subline">Tag @recall-bot to capture threads. Use MCP to let your coding agent search and retrieve them anytime.</p>
+      <p class="hero-subline">Tag @recall-bot to capture important threads, then let your coding agent search and retrieve them via MCP.</p>
     </div>
 
     <div class="cta-section">
@@ -203,13 +203,14 @@
         <div class="step-description">After approval, recall-bot sends you a direct message containing a link to set up your personal dashboard and connect your coding agent.</div>
       </div>
       <div class="step" data-step="3.">
-        <div class="step-title">Tag @recall-bot on any thread to capture it, or run /recall-key in a DM</div>
-        <div class="step-description">Capture important threads by tagging the bot, then search and retrieve them through your coding agent's MCP connection for context-aware development.</div>
+        <div class="step-title">Tag @recall-bot on any thread to capture it, or run /recall-key to get a delegate key</div>
+        <div class="step-description">Capture important threads by tagging the bot. Run /recall-key to get a delegate key that lets your coding agent connect via MCP and search or retrieve any captured thread for context-aware development.</div>
       </div>
     </div>
 
     <div class="footer">
-      <p><strong>Requested OAuth scopes</strong> (source: src/slack/receiver.ts)</p>
+      <p><strong>Requested OAuth scopes</strong></p>
+      <!-- source: src/slack/receiver.ts -->
       <ul class="scopes-list">
         <li>app_mentions:read</li>
         <li>channels:history</li>
