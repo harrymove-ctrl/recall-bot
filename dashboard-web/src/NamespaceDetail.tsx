@@ -11,6 +11,8 @@ interface MessageFile {
 interface MessageRow {
   id: string;
   slackUserId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
   text: string;
   slackTs: string;
   createdAt: string;
@@ -72,7 +74,17 @@ export function NamespaceDetail({ namespaceId }: { namespaceId: string }) {
       {messages.map((m) => (
         <div className="message" key={m.id}>
           <p className="message-meta">
-            {m.slackUserId} — {new Date(m.createdAt).toLocaleString()}
+            {m.avatarUrl && (
+              <img
+                className="avatar"
+                src={m.avatarUrl}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            )}
+            {m.displayName ?? m.slackUserId} — {new Date(m.createdAt).toLocaleString()}
           </p>
           <p>{m.text}</p>
           {m.files.length > 0 && (

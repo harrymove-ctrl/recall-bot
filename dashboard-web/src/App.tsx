@@ -27,6 +27,8 @@ interface NamespaceRow {
 interface UserRow {
   id: string;
   slackUserId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
   keyIssuedOrRotatedAt: string;
 }
 
@@ -133,7 +135,19 @@ function UsersTable({ users, onRevoke }: { users: UserRow[]; onRevoke: (id: stri
       <tbody>
         {users.map((u) => (
           <tr key={u.id}>
-            <td>{u.slackUserId}</td>
+            <td>
+              {u.avatarUrl && (
+                <img
+                  className="avatar"
+                  src={u.avatarUrl}
+                  alt=""
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
+              {u.displayName ?? u.slackUserId}
+            </td>
             <td>{new Date(u.keyIssuedOrRotatedAt).toLocaleDateString()}</td>
             <td>
               <button onClick={() => onRevoke(u.id)}>Revoke</button>
