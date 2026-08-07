@@ -229,7 +229,7 @@ function SpringTab({
               <defs>
                 <linearGradient id="morphing-tabs-liquid-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="100%" stopColor="#f2f1ec" />
+                  <stop offset="100%" stopColor="#fafaf8" />
                 </linearGradient>
               </defs>
               <LiquidSurfacePath
@@ -689,7 +689,7 @@ export function MorphingTabs({
     <div
       ref={rootRef}
       className={cn(
-        "relative isolate min-w-0 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#333333]/85 via-[#242424]/90 to-[#161616]/90 text-white ring-1 ring-inset ring-white/[0.08] backdrop-blur-2xl",
+        "relative isolate min-w-0 overflow-hidden rounded-[2rem] border border-[#dddddd] bg-[#fafafa] text-[#111111]",
         classNames?.root,
         className,
       )}
@@ -753,8 +753,8 @@ export function MorphingTabs({
                       className={cn(
                         "absolute inset-x-0 bottom-2 top-0 rounded-[1.25rem] transition-colors duration-200",
                         isDragging
-                          ? "bg-gradient-to-b from-white/[0.14] to-white/[0.05]"
-                          : "bg-transparent group-hover:bg-white/[0.06]",
+                          ? "bg-[#111111]/[0.06]"
+                          : "bg-transparent group-hover:bg-[#111111]/[0.04]",
                       )}
                     />
                   ) : null}
@@ -781,7 +781,7 @@ export function MorphingTabs({
                       "group relative z-10 flex h-full w-full min-w-0 items-center gap-2 overflow-hidden rounded-t-[1.5rem] px-3 text-left outline-none transition-colors",
                       isActive
                         ? "text-[#181818]"
-                        : "pb-2 text-white/70 hover:text-white",
+                        : "pb-2 text-[#111111]/55 hover:text-[#111111]",
                       classNames?.tab,
                     )}
                   >
@@ -791,7 +791,7 @@ export function MorphingTabs({
                         "pointer-events-none absolute inset-x-1 top-1 opacity-0 transition-opacity group-focus-visible:opacity-100",
                         isActive
                           ? "bottom-0 rounded-t-[1.25rem] border-x-2 border-t-2 border-black/20"
-                          : "bottom-2 rounded-[1rem] border-2 border-white/60",
+                          : "bottom-2 rounded-[1rem] border-2 border-[#111111]/30",
                       )}
                     />
                     {item.icon ? (
@@ -827,7 +827,7 @@ export function MorphingTabs({
                       className={cn(
                         "absolute right-2 top-1/2 z-20 grid size-6 -translate-y-1/2 place-items-center rounded-full text-[#9aa0a8] transition-colors hover:bg-black/[0.06] hover:text-[#4b5563] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current",
                         !isActive &&
-                          "top-[calc(50%-4px)] text-white/45 hover:bg-white/[0.08] hover:text-white/80",
+                          "top-[calc(50%-4px)] text-[#111111]/45 hover:bg-[#111111]/[0.06] hover:text-[#111111]/80",
                         classNames?.close,
                       )}
                     >
