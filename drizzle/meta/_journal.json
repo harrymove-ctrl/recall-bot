@@ -15,6 +15,13 @@
       "when": 1785997790163,
       "tag": "0001_dashboard_claim_tokens_and_namespace_label",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786090878183,
+      "tag": "0002_namespace_linear_issues",
+      "breakpoints": true
     }
   ]
 }

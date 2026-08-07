@@ -122,6 +122,23 @@ export const files = pgTable(
   (t) => [index("files_message_id_idx").on(t.messageId)],
 );
 
+export const namespaceLinearIssues = pgTable(
+  "namespace_linear_issues",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    namespaceId: uuid("namespace_id")
+      .notNull()
+      .references(() => namespaces.id, { onDelete: "cascade" }),
+    workspaceSlug: varchar("workspace_slug", { length: 64 }).notNull(),
+    issueIdentifier: varchar("issue_identifier", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("namespace_linear_issues_namespace_identifier_unique").on(t.namespaceId, t.issueIdentifier),
+    index("namespace_linear_issues_namespace_id_idx").on(t.namespaceId),
+  ],
+);
+
 export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   installation: one(installations, {
     fields: [workspaces.id],
@@ -142,6 +159,7 @@ export const usersRelations = relations(users, ({ one }) => ({
 export const namespacesRelations = relations(namespaces, ({ one, many }) => ({
   workspace: one(workspaces, { fields: [namespaces.workspaceId], references: [workspaces.id] }),
   messages: many(messages),
+  linearIssues: many(namespaceLinearIssues),
 }));
 
 export const messagesRelations = relations(messages, ({ one, many }) => ({
@@ -151,4 +169,8 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
 
 export const filesRelations = relations(files, ({ one }) => ({
   message: one(messages, { fields: [files.messageId], references: [messages.id] }),
+}));
+
+export const namespaceLinearIssuesRelations = relations(namespaceLinearIssues, ({ one }) => ({
+  namespace: one(namespaces, { fields: [namespaceLinearIssues.namespaceId], references: [namespaces.id] }),
 }));
