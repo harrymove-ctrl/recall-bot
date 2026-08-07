@@ -183,6 +183,116 @@ a:hover {
   margin-right: var(--space-1);
 }
 
+.day-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.day-divider::before,
+.day-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+.day-divider:first-child {
+  margin-top: 0;
+}
+
+.message-group {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin: 0 calc(-1 * var(--space-2));
+  border-radius: 4px;
+}
+.message-group:hover {
+  background: var(--color-surface);
+}
+.message-group-avatar-col {
+  flex-shrink: 0;
+}
+.message-group-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.message-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.message-author {
+  font-weight: 500;
+  color: var(--color-text);
+}
+.message-time {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.message-row-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-4);
+  height: var(--space-4);
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  vertical-align: middle;
+  margin-right: var(--space-1);
+  background: linear-gradient(160deg, var(--color-surface), color-mix(in srgb, var(--color-border) 35%, var(--color-surface)));
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.file-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--color-text);
+}
+.file-badge-type {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.file-badge--pending,
+.file-badge--failed {
+  border-style: dashed;
+}
+.file-badge--failed .file-badge-name {
+  text-decoration: line-through;
+}
+
+.issue-badge--inline {
+  margin: 0 2px;
+  vertical-align: -1px;
+}
+
 .analytics-bar-wrap {
   display: inline-flex;
   align-items: center;
