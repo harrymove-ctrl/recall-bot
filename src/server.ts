@@ -11,6 +11,7 @@ import { registerEventHandlers } from "./slack/events.js";
 import { registerRecallKeyCommand } from "./slack/recallKeyCommand.js";
 import { mountMcpServer } from "./mcp/server.js";
 import { createDashboardApiRouter } from "./dashboard/api.js";
+import { createMeApiRouter } from "./dashboard/meApi.js";
 
 // Resolved from this file rather than process.cwd() so it works whether this runs from
 // src/server.ts (tsx) or the compiled dist/server.js — both sit one level below the
@@ -41,6 +42,8 @@ export function buildApp(database: Database): Express {
     res.status(200).json({ ok: true });
   });
 
+  const publicBaseUrl = requireEnv("PUBLIC_BASE_URL"); // captured once, reused below
+
   const receiver = createSlackReceiver({
     db: database,
     app,
@@ -48,15 +51,27 @@ export function buildApp(database: Database): Express {
     clientId: requireEnv("SLACK_CLIENT_ID"),
     clientSecret: requireEnv("SLACK_CLIENT_SECRET"),
     stateSecret: requireEnv("SLACK_STATE_SECRET"),
-    publicBaseUrl: requireEnv("PUBLIC_BASE_URL"),
+    publicBaseUrl,
   });
   const slackApp = createSlackApp(receiver);
   registerEventHandlers(slackApp, database);
-  registerRecallKeyCommand(slackApp, database);
+  registerRecallKeyCommand(slackApp, database, publicBaseUrl);
 
   app.use(express.json());
 
   const dashboardSessionSecret = requireEnv("DASHBOARD_SESSION_SECRET");
+  const userSessionSecret = requireEnv("USER_SESSION_SECRET");
+  // See docs/superpowers/specs/2026-08-07-personal-view-design.md: a shared secret would let a
+  // personal-session cookie's payload (a strict superset of the admin cookie's shape) verify as
+  // a valid admin session too, since verifySessionCookie ignores unknown extra fields. Catching
+  // this misconfiguration at boot is far cheaper than discovering it as a live privilege-
+  // escalation report.
+  if (userSessionSecret === dashboardSessionSecret) {
+    throw new Error(
+      "USER_SESSION_SECRET must not equal DASHBOARD_SESSION_SECRET — generate a second, independent secret (openssl rand -hex 32).",
+    );
+  }
+
   // These two exact-path routes are registered ahead of the express.static mount below because
   // serve-static's default directory-index handling 301-redirects a bare "/dashboard" request to
   // "/dashboard/" instead of serving index.html directly — registering first lets both the root
@@ -76,8 +91,21 @@ export function buildApp(database: Database): Express {
   app.get("/dashboard/namespaces/:id", (_req, res) => {
     res.sendFile("index.html", { root: DASHBOARD_DIST });
   });
+  // Same reasoning as the three routes above, for the personal-view surface: registered ahead of
+  // express.static so a direct hit (e.g. from the Slack DM link) serves the SPA shell instead of
+  // a static-file 404.
+  app.get("/dashboard/me", (_req, res) => {
+    res.sendFile("index.html", { root: DASHBOARD_DIST });
+  });
+  app.get("/dashboard/me/claim", (_req, res) => {
+    res.sendFile("index.html", { root: DASHBOARD_DIST });
+  });
+  app.get("/dashboard/me/namespaces/:id", (_req, res) => {
+    res.sendFile("index.html", { root: DASHBOARD_DIST });
+  });
   app.use("/dashboard", express.static(DASHBOARD_DIST));
   app.use("/api/dashboard", createDashboardApiRouter(database, dashboardSessionSecret));
+  app.use("/api/me", createMeApiRouter(database, userSessionSecret));
 
   mountMcpServer(app, database);
 

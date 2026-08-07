@@ -70,4 +70,29 @@ describe("buildApp (wired)", () => {
     const res = await request(app).get("/api/dashboard/me");
     expect(res.status).toBe(401);
   });
+
+  it("refuses to boot when USER_SESSION_SECRET is not configured", () => {
+    vi.stubEnv("USER_SESSION_SECRET", "");
+    expect(() => buildApp(db)).toThrow("Missing required environment variable: USER_SESSION_SECRET");
+  });
+
+  it("refuses to boot when USER_SESSION_SECRET equals DASHBOARD_SESSION_SECRET", () => {
+    vi.stubEnv("USER_SESSION_SECRET", process.env.DASHBOARD_SESSION_SECRET ?? "");
+    expect(() => buildApp(db)).toThrow(/USER_SESSION_SECRET must not equal DASHBOARD_SESSION_SECRET/);
+  });
+
+  it("serves the personal-view SPA shell routes", async () => {
+    const app = buildApp(db);
+    for (const path of ["/dashboard/me", "/dashboard/me/claim", "/dashboard/me/namespaces/00000000-0000-0000-0000-000000000000"]) {
+      const res = await request(app).get(path);
+      expect(res.status).toBe(200);
+      expect(res.text).toContain("bundle.js");
+    }
+  });
+
+  it("exposes /api/me/me and rejects unauthenticated calls", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/api/me/me");
+    expect(res.status).toBe(401);
+  });
 });

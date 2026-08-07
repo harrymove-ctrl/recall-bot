@@ -18,6 +18,7 @@ export default defineConfig({
       SLACK_CLIENT_SECRET: "test-client-secret",
       SLACK_STATE_SECRET: "test-state-secret-test-state-secret",
       DASHBOARD_SESSION_SECRET: "test-dashboard-session-secret",
+      USER_SESSION_SECRET: "test-user-session-secret",
       PUBLIC_BASE_URL: "https://recall-bot.test",
     },
   },

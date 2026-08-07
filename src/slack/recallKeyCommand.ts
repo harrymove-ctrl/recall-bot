@@ -3,6 +3,7 @@ import type { Database } from "../db/client.js";
 import { users } from "../db/schema.js";
 import { resolveWorkspaceByTeamId } from "../db/workspaces.js";
 import { generateDelegateKey } from "../keys/delegateKeys.js";
+import { issueUserClaimToken } from "../dashboard/userClaimTokens.js";
 
 export async function issueDelegateKey(db: Database, workspaceId: string, slackUserId: string): Promise<string> {
   const { plaintext, hash } = generateDelegateKey();
@@ -18,7 +19,17 @@ export async function issueDelegateKey(db: Database, workspaceId: string, slackU
   return plaintext;
 }
 
-export function registerRecallKeyCommand(app: App, db: Database): void {
+export async function issuePersonalLoginLink(
+  db: Database,
+  workspaceId: string,
+  slackUserId: string,
+  publicBaseUrl: string,
+): Promise<string> {
+  const token = await issueUserClaimToken(db, workspaceId, slackUserId);
+  return `${publicBaseUrl}/dashboard/me/claim?token=${token}`;
+}
+
+export function registerRecallKeyCommand(app: App, db: Database, publicBaseUrl: string): void {
   app.command("/recall-key", async ({ command, ack, client, logger, respond }) => {
     await ack();
 
@@ -34,11 +45,16 @@ export function registerRecallKeyCommand(app: App, db: Database): void {
       }
 
       const plaintext = await issueDelegateKey(db, workspaceIdRow.id, command.user_id);
+      const loginLink = await issuePersonalLoginLink(db, workspaceIdRow.id, command.user_id, publicBaseUrl);
 
       const dm = await client.conversations.open({ users: command.user_id });
       await client.chat.postMessage({
         channel: dm.channel!.id!,
-        text: `Here's your recall delegate key. Keep it secret — anyone with this key can recall any thread you've participated in:\n\`${plaintext}\`\n\nRun \`/recall-key\` again any time to rotate it (this invalidates the old one).`,
+        text:
+          `Here's your recall delegate key. Keep it secret — anyone with this key can recall any thread you've participated in:\n\`${plaintext}\`\n\n` +
+          `Run \`/recall-key\` again any time to rotate it (this invalidates the old one).\n\n` +
+          `Prefer a browser? View your captured threads here: ${loginLink}\n` +
+          `(single-use, expires in 7 days — run /recall-key again any time for a fresh link)`,
       });
     } catch (error) {
       logger.error(error);
