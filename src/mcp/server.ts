@@ -5,6 +5,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { Database } from "../db/client.js";
 import { requireDelegateKey, type AuthedRequest, type DelegateUser } from "./auth.js";
+import { logRecallEvent } from "./recallEvents.js";
 import { recallNamespace } from "./recallTool.js";
 
 function buildRecallServer(db: Database, delegateUser: DelegateUser | undefined): McpServer {
@@ -28,6 +29,13 @@ function buildRecallServer(db: Database, delegateUser: DelegateUser | undefined)
       if (!result.authorized) {
         return { content: [{ type: "text", text: "Not authorized to recall this namespace" }], isError: true };
       }
+
+      // Fire-and-forget: this is the one place in the codebase where a DB write is intentionally
+      // NOT awaited inline. A logging failure (e.g. a transient DB error) must never delay or
+      // fail the recall response — do not "fix" this into a blocking `await`.
+      logRecallEvent(db, result.namespaceId, delegateUser.id).catch((err) => {
+        console.error("Failed to log recall event:", err);
+      });
 
       return {
         content: [
