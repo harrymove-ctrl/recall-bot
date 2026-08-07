@@ -154,3 +154,21 @@ a:hover {
   font-size: 12px;
   margin: 0 0 var(--space-1) 0;
 }
+
+.issue-badge {
+  display: inline-block;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  margin: 0 var(--space-1) var(--space-1) 0;
+  font-size: 12px;
+  color: var(--color-accent);
+}
+
+.issue-badge:hover {
+  text-decoration: underline;
+}
+
+.linked-issues {
+  margin-bottom: var(--space-3);
+}

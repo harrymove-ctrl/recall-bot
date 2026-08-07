@@ -17,8 +17,19 @@ interface MessageRow {
   files: MessageFile[];
 }
 
+interface LinearIssueRef {
+  identifier: string;
+  url: string;
+}
+
+interface NamespaceMessagesResponse {
+  messages: MessageRow[];
+  linearIssues: LinearIssueRef[];
+}
+
 export function NamespaceDetail({ namespaceId }: { namespaceId: string }) {
   const [messages, setMessages] = useState<MessageRow[] | null>(null);
+  const [linearIssues, setLinearIssues] = useState<LinearIssueRef[]>([]);
   const [unauthorized, setUnauthorized] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -32,7 +43,9 @@ export function NamespaceDetail({ namespaceId }: { namespaceId: string }) {
         setNotFound(true);
         return;
       }
-      setMessages(await res.json());
+      const body: NamespaceMessagesResponse = await res.json();
+      setMessages(body.messages);
+      setLinearIssues(body.linearIssues);
     });
   }, [namespaceId]);
 
@@ -46,6 +59,15 @@ export function NamespaceDetail({ namespaceId }: { namespaceId: string }) {
         <a href="/dashboard">← Back to namespaces</a>
       </p>
       <h1>Captured thread</h1>
+      {linearIssues.length > 0 && (
+        <div className="linked-issues">
+          {linearIssues.map((issue) => (
+            <a key={issue.identifier} className="issue-badge" href={issue.url} target="_blank" rel="noopener noreferrer">
+              {issue.identifier}
+            </a>
+          ))}
+        </div>
+      )}
       {messages.length === 0 && <p>No messages captured yet.</p>}
       {messages.map((m) => (
         <div className="message" key={m.id}>

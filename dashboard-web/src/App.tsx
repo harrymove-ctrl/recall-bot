@@ -9,6 +9,11 @@ interface WorkspaceInfo {
   revoked: boolean;
 }
 
+interface LinearIssueRef {
+  identifier: string;
+  url: string;
+}
+
 interface NamespaceRow {
   id: string;
   channelId: string;
@@ -16,6 +21,7 @@ interface NamespaceRow {
   label: string | null;
   status: string;
   createdAt: string;
+  linearIssues: LinearIssueRef[];
 }
 
 interface UserRow {
@@ -82,6 +88,7 @@ function NamespacesTable({
           <th>Channel</th>
           <th>Status</th>
           <th>Created</th>
+          <th>Linked issues</th>
           <th></th>
           <th></th>
         </tr>
@@ -95,6 +102,13 @@ function NamespacesTable({
             <td>{n.channelId}</td>
             <td>{n.status}</td>
             <td>{new Date(n.createdAt).toLocaleDateString()}</td>
+            <td>
+              {n.linearIssues.map((issue) => (
+                <a key={issue.identifier} className="issue-badge" href={issue.url} target="_blank" rel="noopener noreferrer">
+                  {issue.identifier}
+                </a>
+              ))}
+            </td>
             <td>
               <a href={`/dashboard/namespaces/${n.id}`}>View</a>
             </td>
