@@ -6,6 +6,7 @@ import { namespaces, messages } from "../db/schema.js";
 import { resolveWorkspaceByTeamId } from "../db/workspaces.js";
 import { backfillThread } from "./backfill.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
+import { recordLinearIssueLinks } from "./linearLinks.js";
 
 interface AppMentionLikeEvent {
   channel: string;
@@ -105,6 +106,10 @@ export async function handleMessage(params: {
     for (const file of message.files) {
       await captureSlackFile({ db, file, botToken, messageId: messageRow.id });
     }
+  }
+
+  if (messageRow) {
+    await recordLinearIssueLinks({ db, namespaceId: namespace.id, text: message.text ?? "" });
   }
 }
 

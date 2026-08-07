@@ -3,6 +3,7 @@ import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
 import { namespaces, messages, files } from "../db/schema.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
+import { recordLinearIssueLinks } from "./linearLinks.js";
 
 export interface BackfillThreadParams {
   db: Database;
@@ -123,6 +124,11 @@ export async function backfillThread(params: BackfillThreadParams): Promise<{ na
         })
         .onConflictDoNothing({ target: [messages.namespaceId, messages.slackTs] })
         .returning();
+
+      // Runs unconditionally — for newly inserted AND already-existing messages — so re-tagging
+      // a thread doubles as retroactive link detection for namespaces captured before this
+      // feature existed. onConflictDoNothing on the join table makes this cheap and idempotent.
+      await recordLinearIssueLinks({ db, namespaceId: namespace.id, text: raw.text ?? "" });
 
       // onConflictDoNothing returns [] on a skipped row
       const rawFiles = (raw as { files?: SlackFileObject[] }).files ?? [];

@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { mockClient } from "aws-sdk-client-mock";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "../../src/db/client.js";
-import { workspaces, namespaces, messages, files } from "../../src/db/schema.js";
+import { workspaces, namespaces, messages, files, namespaceLinearIssues } from "../../src/db/schema.js";
 import {
   handleAppMention,
   handleMessage,
@@ -167,6 +167,49 @@ describe("handleMessage", () => {
     });
 
     const rows = await db.select().from(messages);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("records a Linear issue link found in a captured reply", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T2b", name: "T" }).returning();
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C2b", threadTs: "2.100" })
+      .returning();
+
+    await handleMessage({
+      db,
+      botToken: "xoxb-token",
+      workspaceId: workspace.id,
+      message: {
+        channel: "C2b",
+        ts: "2.101",
+        thread_ts: "2.100",
+        user: "U1",
+        text: "blocked by <https://linear.app/mysten-labs/issue/WALM-297>",
+      } as any,
+    });
+
+    const rows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespace.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].issueIdentifier).toBe("WALM-297");
+  });
+
+  it("records nothing for a message with no Linear link", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T2c", name: "T" }).returning();
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C2c", threadTs: "2.200" })
+      .returning();
+
+    await handleMessage({
+      db,
+      botToken: "xoxb-token",
+      workspaceId: workspace.id,
+      message: { channel: "C2c", ts: "2.201", thread_ts: "2.200", user: "U1", text: "no link here" } as any,
+    });
+
+    const rows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespace.id));
     expect(rows).toHaveLength(0);
   });
 });

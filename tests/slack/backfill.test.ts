@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { mockClient } from "aws-sdk-client-mock";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "../../src/db/client.js";
-import { workspaces, namespaces, messages, files } from "../../src/db/schema.js";
+import { workspaces, namespaces, messages, files, namespaceLinearIssues } from "../../src/db/schema.js";
 import { backfillThread } from "../../src/slack/backfill.js";
 
 const s3Mock = mockClient(S3Client);
@@ -264,5 +264,50 @@ describe("backfillThread", () => {
       .from(namespaces)
       .where(and(eq(namespaces.workspaceId, workspace.id), eq(namespaces.channelId, "C4"), eq(namespaces.threadTs, "4.000")));
     expect(namespace).toBeDefined();
+  });
+
+  it("populates the join table from a Linear link found during a thread replay", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "TL1", name: "T" }).returning();
+    const client = fakeWebClient([
+      { messages: [{ ts: "30.000", user: "U1", text: "see <https://linear.app/mysten-labs/issue/WALM-9>" }] },
+    ]);
+
+    const { namespaceId } = await backfillThread({
+      db,
+      client,
+      workspaceId: workspace.id,
+      channelId: "C30",
+      threadTs: "30.000",
+      botToken: "xoxb-token",
+    });
+
+    const rows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespaceId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].issueIdentifier).toBe("WALM-9");
+  });
+
+  it("retroactively detects a Linear link in a message captured before this feature existed", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "TL2", name: "T" }).returning();
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C31", threadTs: "31.000" })
+      .returning();
+    // Simulates a message stored by an earlier backfill, before Linear link detection shipped.
+    await db.insert(messages).values({
+      namespaceId: namespace.id,
+      slackUserId: "U1",
+      text: "see <https://linear.app/mysten-labs/issue/WALM-10>",
+      slackTs: "31.000",
+    });
+
+    const client = fakeWebClient([
+      { messages: [{ ts: "31.000", user: "U1", text: "see <https://linear.app/mysten-labs/issue/WALM-10>" }] },
+    ]);
+
+    await backfillThread({ db, client, workspaceId: workspace.id, channelId: "C31", threadTs: "31.000", botToken: "xoxb-token" });
+
+    const rows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespace.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].issueIdentifier).toBe("WALM-10");
   });
 });
