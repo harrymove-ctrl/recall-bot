@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { Response } from "express";
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, max } from "drizzle-orm";
 import type { Database } from "../db/client.js";
-import { installations, namespaces, users, workspaces, messages, files, namespaceLinearIssues } from "../db/schema.js";
+import { installations, namespaces, users, workspaces, messages, files, namespaceLinearIssues, recallEvents } from "../db/schema.js";
 import { consumeClaimToken } from "./claimTokens.js";
 import { createSessionCookie } from "./session.js";
 import { DASHBOARD_COOKIE_NAME, requireDashboardSession, type DashboardRequest } from "./auth.js";
@@ -223,6 +223,24 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
       .where(and(eq(users.id, userId), eq(users.workspaceId, req.workspaceId!), isNotNull(users.delegateKeyHash)))
       .returning();
     res.json({ ok: true, revoked: Boolean(row) });
+  });
+
+  router.get("/analytics", auth, async (req: DashboardRequest, res: Response) => {
+    const rows = await db
+      .select({
+        namespaceId: namespaces.id,
+        label: namespaces.label,
+        channelId: namespaces.channelId,
+        recallCount: count(recallEvents.id),
+        lastRecalledAt: max(recallEvents.createdAt),
+      })
+      .from(recallEvents)
+      .innerJoin(namespaces, eq(recallEvents.namespaceId, namespaces.id))
+      .where(eq(namespaces.workspaceId, req.workspaceId!))
+      .groupBy(namespaces.id, namespaces.label, namespaces.channelId)
+      .orderBy(desc(max(recallEvents.createdAt)));
+
+    res.json(rows);
   });
 
   return router;

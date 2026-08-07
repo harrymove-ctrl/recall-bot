@@ -12,6 +12,7 @@ import {
   files,
   namespaceLinearIssues,
   slackUserProfiles,
+  recallEvents,
 } from "../../src/db/schema.js";
 import { issueClaimToken } from "../../src/dashboard/claimTokens.js";
 import { hashDelegateKey } from "../../src/keys/delegateKeys.js";
@@ -348,5 +349,60 @@ describe("dashboard API", () => {
     const res = await request(app).post("/api/dashboard/logout").set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.headers["set-cookie"][0]).toMatch(/recall_dashboard_session=;/);
+  });
+
+  it("GET /analytics returns per-namespace recall counts sorted by most-recently-used", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T13");
+    const [namespaceA] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.1", label: "Old thread" })
+      .returning();
+    const [namespaceB] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C2", threadTs: "2.1", label: "Recent thread" })
+      .returning();
+    const [user] = await db.insert(users).values({ workspaceId: workspace.id, slackUserId: "U1" }).returning();
+
+    await db.insert(recallEvents).values([
+      { namespaceId: namespaceA.id, delegateUserId: user.id, createdAt: new Date("2026-01-01T00:00:00Z") },
+      { namespaceId: namespaceB.id, delegateUserId: user.id, createdAt: new Date("2026-01-02T00:00:00Z") },
+      { namespaceId: namespaceB.id, delegateUserId: user.id, createdAt: new Date("2026-01-03T00:00:00Z") },
+    ]);
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const res = await request(app).get("/api/dashboard/analytics").set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0].namespaceId).toBe(namespaceB.id);
+    expect(res.body[0].recallCount).toBe(2);
+    expect(res.body[1].namespaceId).toBe(namespaceA.id);
+    expect(res.body[1].recallCount).toBe(1);
+  });
+
+  it("GET /analytics omits a namespace with zero recall events", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T14");
+    await db.insert(namespaces).values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.1" });
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const res = await request(app).get("/api/dashboard/analytics").set("Cookie", cookie);
+    expect(res.body).toEqual([]);
+  });
+
+  it("a workspace's session cannot see another workspace's recall activity", async () => {
+    const app = buildTestApp();
+    const workspaceA = await seedWorkspace("T15A");
+    const workspaceB = await seedWorkspace("T15B");
+    const [namespaceB] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspaceB.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    const [userB] = await db.insert(users).values({ workspaceId: workspaceB.id, slackUserId: "U1" }).returning();
+    await db.insert(recallEvents).values({ namespaceId: namespaceB.id, delegateUserId: userB.id });
+    const cookieA = await claimSessionCookie(app, workspaceA.id);
+
+    const res = await request(app).get("/api/dashboard/analytics").set("Cookie", cookieA);
+    expect(res.body).toEqual([]);
   });
 });
