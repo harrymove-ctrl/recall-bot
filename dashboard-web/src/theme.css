@@ -43,6 +43,10 @@ h2 {
   margin-top: var(--space-5);
 }
 
+.tabs-panel-content {
+  padding: var(--space-4);
+}
+
 table {
   border-collapse: collapse;
   width: 100%;

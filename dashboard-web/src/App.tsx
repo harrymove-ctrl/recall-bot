@@ -216,6 +216,7 @@ function Dashboard() {
         value={activeTab}
         onValueChange={(id) => id && setActiveTab(id)}
         ariaLabel="Dashboard sections"
+        classNames={{ content: "tabs-panel-content" }}
       />
     </div>
   );
