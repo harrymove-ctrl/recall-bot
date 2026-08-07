@@ -113,27 +113,33 @@ function NamespacesTable({
         </tr>
       </thead>
       <tbody>
-        {namespaces.map((n) => (
-          <tr key={n.id}>
-            <td>
-              <input defaultValue={n.label ?? ""} placeholder={n.threadTs} onBlur={(e) => onRename(n.id, e.currentTarget.value)} />
-            </td>
-            <td>{n.channelId}</td>
-            <td>{n.status}</td>
-            <td>{new Date(n.createdAt).toLocaleDateString()}</td>
-            <td>
-              {n.linearIssues.map((issue) => (
-                <a key={issue.identifier} className="issue-badge" href={issue.url} target="_blank" rel="noopener noreferrer">
-                  {issue.identifier}
-                </a>
-              ))}
-            </td>
-            <td>
-              <a href={`/dashboard/namespaces/${n.id}`}>View</a>
-            </td>
-            <td>{n.status !== "archived" && <button onClick={() => onArchive(n.id)}>Archive</button>}</td>
+        {namespaces.length === 0 ? (
+          <tr>
+            <td colSpan={7}>No threads captured yet — tag @recall-bot on a thread to get started.</td>
           </tr>
-        ))}
+        ) : (
+          namespaces.map((n) => (
+            <tr key={n.id}>
+              <td>
+                <input defaultValue={n.label ?? ""} placeholder={n.threadTs} onBlur={(e) => onRename(n.id, e.currentTarget.value)} />
+              </td>
+              <td>{n.channelId}</td>
+              <td>{n.status}</td>
+              <td>{new Date(n.createdAt).toLocaleDateString()}</td>
+              <td>
+                {n.linearIssues.map((issue) => (
+                  <a key={issue.identifier} className="issue-badge" href={issue.url} target="_blank" rel="noopener noreferrer">
+                    {issue.identifier}
+                  </a>
+                ))}
+              </td>
+              <td>
+                <a href={`/dashboard/namespaces/${n.id}`}>View</a>
+              </td>
+              <td>{n.status !== "archived" && <button onClick={() => onArchive(n.id)}>Archive</button>}</td>
+            </tr>
+          ))
+        )}
       </tbody>
     </table>
   );
@@ -150,27 +156,33 @@ function UsersTable({ users, onRevoke }: { users: UserRow[]; onRevoke: (id: stri
         </tr>
       </thead>
       <tbody>
-        {users.map((u) => (
-          <tr key={u.id}>
-            <td>
-              {u.avatarUrl && (
-                <img
-                  className="avatar"
-                  src={u.avatarUrl}
-                  alt=""
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              )}
-              {u.displayName ?? u.slackUserId}
-            </td>
-            <td>{new Date(u.keyIssuedOrRotatedAt).toLocaleDateString()}</td>
-            <td>
-              <button onClick={() => onRevoke(u.id)}>Revoke</button>
-            </td>
+        {users.length === 0 ? (
+          <tr>
+            <td colSpan={3}>No delegate keys issued yet — run /recall-key in a DM with @recall-bot to get one.</td>
           </tr>
-        ))}
+        ) : (
+          users.map((u) => (
+            <tr key={u.id}>
+              <td>
+                {u.avatarUrl && (
+                  <img
+                    className="avatar"
+                    src={u.avatarUrl}
+                    alt=""
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
+                {u.displayName ?? u.slackUserId}
+              </td>
+              <td>{new Date(u.keyIssuedOrRotatedAt).toLocaleDateString()}</td>
+              <td>
+                <button onClick={() => onRevoke(u.id)}>Revoke</button>
+              </td>
+            </tr>
+          ))
+        )}
       </tbody>
     </table>
   );
@@ -210,6 +222,59 @@ function AnalyticsTable({ analytics }: { analytics: AnalyticsRow[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function GettingStartedSteps({ origin }: { origin: string }) {
+  const [copied, setCopied] = useState(false);
+  const mcpUrl = `${origin}/mcp`;
+  const copyUrl = () => {
+    navigator.clipboard
+      ?.writeText(mcpUrl)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {});
+  };
+  return (
+    <ol className="getting-started-steps">
+      <li>
+        Tag <code>@recall-bot</code> on any Slack thread you want to keep.
+      </li>
+      <li>
+        DM the bot <code>/recall-key</code> to get your personal delegate key.
+      </li>
+      <li>
+        Point an MCP-capable agent at <code>{mcpUrl}</code> using that key as a Bearer token.{" "}
+        <button type="button" onClick={copyUrl}>
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </li>
+    </ol>
+  );
+}
+
+function GettingStartedPanel({ hasNamespaces }: { hasNamespaces: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const origin = window.location.origin;
+
+  if (!hasNamespaces) {
+    return (
+      <div className="getting-started-panel">
+        <h2>Get started</h2>
+        <GettingStartedSteps origin={origin} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="getting-started-collapsed">
+      <button type="button" className="getting-started-link" onClick={() => setExpanded((v) => !v)}>
+        Getting started
+      </button>
+      {expanded && <GettingStartedSteps origin={origin} />}
+    </div>
   );
 }
 
@@ -297,6 +362,8 @@ function Dashboard() {
         {workspace.installedAt ? new Date(workspace.installedAt).toLocaleDateString() : "unknown"}
         {workspace.revoked ? " — REVOKED" : ""}
       </p>
+
+      <GettingStartedPanel hasNamespaces={namespaces.length > 0} />
 
       <MorphingTabs
         items={tabs}
