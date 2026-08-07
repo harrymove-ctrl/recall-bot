@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NamespaceDetail } from "./NamespaceDetail";
 import { MeClaimView, PersonalDashboard, MeNamespaceDetail } from "./MePage";
 import { MorphingTabs, type MorphingTabsItem } from "./components/motion/morphing-tabs";
+import { BlazeBackground } from "./components/effects/BlazeBackground";
 
 interface WorkspaceInfo {
   name: string;
@@ -339,6 +340,7 @@ export function App() {
 
   return (
     <>
+      <BlazeBackground />
       {gridMode && <div className="grid-overlay" />}
       <button className="grid-toggle" onClick={toggleGridMode}>
         Grid Mode: {gridMode ? "On" : "Off"}

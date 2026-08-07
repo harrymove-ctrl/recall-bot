@@ -124,6 +124,13 @@ a:hover {
   color: var(--color-text-muted);
 }
 
+.blaze-background {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .grid-overlay {
   position: fixed;
   inset: 0;
