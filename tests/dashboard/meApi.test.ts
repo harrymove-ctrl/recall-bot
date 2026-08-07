@@ -54,6 +54,7 @@ describe("personal (/api/me) API", () => {
     expect((await request(app).get("/api/me/me")).status).toBe(401);
     expect((await request(app).get("/api/me/namespaces")).status).toBe(401);
     expect((await request(app).get(`/api/me/namespaces/${crypto.randomUUID()}/messages`)).status).toBe(401);
+    expect((await request(app).post("/api/me/logout")).status).toBe(401);
   });
 
   it("GET /namespaces lists only namespaces the session's slackUserId participated in, never another user's or another workspace's", async () => {

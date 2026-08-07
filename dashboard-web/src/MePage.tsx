@@ -101,9 +101,13 @@ export function PersonalDashboard() {
       }
       res.json().then(setIdentity);
     });
-    fetch("/api/me/namespaces")
-      .then((res) => (res.ok ? res.json() : []))
-      .then(setNamespaces);
+    fetch("/api/me/namespaces").then((res) => {
+      if (res.status === 401) {
+        setUnauthorized(true);
+        return;
+      }
+      res.json().then(setNamespaces);
+    });
   }, []);
 
   if (unauthorized) return <MeNoSession />;
