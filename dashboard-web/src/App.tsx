@@ -3,6 +3,7 @@ import { NamespaceDetail } from "./NamespaceDetail";
 import { MeClaimView, PersonalDashboard, MeNamespaceDetail } from "./MePage";
 import { MorphingTabs, type MorphingTabsItem } from "./components/motion/morphing-tabs";
 import { BlazeBackground } from "./components/effects/BlazeBackground";
+import { FlameWrap } from "./components/effects/flame-wrap";
 
 interface WorkspaceInfo {
   name: string;
@@ -291,13 +292,33 @@ function Dashboard() {
         {workspace.revoked ? " — REVOKED" : ""}
       </p>
 
-      <MorphingTabs
-        items={tabs}
-        value={activeTab}
-        onValueChange={(id) => id && setActiveTab(id)}
-        ariaLabel="Dashboard sections"
-        classNames={{ content: "tabs-panel-content" }}
-      />
+      <FlameWrap
+        color="#2e00ff"
+        intensity={0.18}
+        height={14}
+        spread={5}
+        radius={32} // keep in sync with morphing-tabs.tsx's `rounded-[2rem]` — see design doc
+        speed={0.18}
+        scale={0.55}
+        turbulence={0.3}
+        turbulenceScale={0.8}
+        turbulenceReach={20}
+        sparks={0.4}
+        sparkSize={1.6}
+        sparkDensity={3}
+        sparkSpeed={18}
+        rim={0.5}
+        melt={2}
+        distortion={3}
+      >
+        <MorphingTabs
+          items={tabs}
+          value={activeTab}
+          onValueChange={(id) => id && setActiveTab(id)}
+          ariaLabel="Dashboard sections"
+          classNames={{ content: "tabs-panel-content" }}
+        />
+      </FlameWrap>
     </div>
   );
 }
