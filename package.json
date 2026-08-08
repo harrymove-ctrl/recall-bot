@@ -31,9 +31,11 @@
     "express": "^5.2.1",
     "lucide-react": "^1.29.0",
     "motion": "^13.0.0",
+    "node-emoji": "^2.2.0",
     "pg": "^8.22.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "slack-message-parser": "^3.0.2",
     "tailwind-merge": "^3.6.0",
     "zod": "^3.25.0"
   },

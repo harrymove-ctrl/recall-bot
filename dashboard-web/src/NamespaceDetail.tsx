@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { parse, NodeType, type Node as MrkdwnNode } from "slack-message-parser";
+import { get as getEmoji } from "node-emoji";
 
 interface MessageFile {
   id: string;
@@ -26,6 +28,7 @@ interface LinearIssueRef {
 interface NamespaceMessagesResponse {
   messages: MessageRow[];
   linearIssues: LinearIssueRef[];
+  mentionNames: Record<string, string | null>;
 }
 
 interface MessageRun {
@@ -103,35 +106,96 @@ function Avatar({
   );
 }
 
-const URL_RE = /(https?:\/\/[^\s<>"']+)/g;
+const BARE_URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 const TRAILING_PUNCT_RE = /[.,;:!?)\]}'"]+$/;
 
-function linkifyText(text: string, linearIssues: LinearIssueRef[]): (string | JSX.Element)[] {
-  const issueByUrl = new Map(linearIssues.map((i) => [i.url, i.identifier]));
-  return text.split(URL_RE).map((part, i) => {
+interface MrkdwnContext {
+  linearIssues: LinearIssueRef[];
+  mentionNames: Record<string, string | null>;
+}
+
+function issueBadgeOrLink(url: string, label: (string | JSX.Element)[] | string, ctx: MrkdwnContext) {
+  const identifier = ctx.linearIssues.find((issue) => issue.url === url)?.identifier;
+  if (identifier) {
+    return (
+      <a className="issue-badge issue-badge--inline" href={url} target="_blank" rel="noopener noreferrer">
+        {identifier}
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      {label}
+    </a>
+  );
+}
+
+// Slack auto-wraps URLs a user types as `<url>` before the message is ever stored, so this only
+// fires for the rare message that reaches us with a plain, unbracketed URL (e.g. posted via an
+// API path that skips Slack's own client-side linkification) — the parser below leaves those as
+// plain Text nodes since bare-URL detection isn't part of Slack's own mrkdwn grammar.
+function linkifyBareUrls(text: string, ctx: MrkdwnContext): (string | JSX.Element)[] {
+  return text.split(BARE_URL_RE).map((part, i) => {
     if (i % 2 === 0) return part; // plain text — React escapes automatically, no dangerouslySetInnerHTML anywhere
     const trailingMatch = part.match(TRAILING_PUNCT_RE);
     const trailing = trailingMatch?.[0] ?? "";
     const url = trailing ? part.slice(0, -trailing.length) : part;
-    const identifier = issueByUrl.get(url);
-    const link = identifier ? (
-      <a key={i} className="issue-badge issue-badge--inline" href={url} target="_blank" rel="noopener noreferrer">
-        {identifier}
-      </a>
-    ) : (
-      <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-        {url}
-      </a>
-    );
-    return trailing ? (
-      <span key={i}>
-        {link}
+    return (
+      <Fragment key={i}>
+        {issueBadgeOrLink(url, url, ctx)}
         {trailing}
-      </span>
-    ) : (
-      link
+      </Fragment>
     );
   });
+}
+
+function renderMrkdwnList(nodes: MrkdwnNode[], ctx: MrkdwnContext): JSX.Element[] {
+  return nodes.map((node, i) => <Fragment key={i}>{renderMrkdwnNode(node, ctx)}</Fragment>);
+}
+
+function renderMrkdwnNode(node: MrkdwnNode, ctx: MrkdwnContext): JSX.Element | string {
+  switch (node.type) {
+    case NodeType.Root:
+      return <>{renderMrkdwnList(node.children, ctx)}</>;
+    case NodeType.Text:
+      return <>{linkifyBareUrls(node.text, ctx)}</>;
+    case NodeType.Bold:
+      return <strong>{renderMrkdwnList(node.children, ctx)}</strong>;
+    case NodeType.Italic:
+      return <em>{renderMrkdwnList(node.children, ctx)}</em>;
+    case NodeType.Strike:
+      return <del>{renderMrkdwnList(node.children, ctx)}</del>;
+    case NodeType.Quote:
+      return <blockquote className="mrkdwn-quote">{renderMrkdwnList(node.children, ctx)}</blockquote>;
+    case NodeType.Code:
+      return <code className="mrkdwn-code">{node.text}</code>;
+    case NodeType.PreText:
+      return (
+        <pre className="mrkdwn-pre">
+          <code>{node.text.replace(/^\n/, "").replace(/\n$/, "")}</code>
+        </pre>
+      );
+    case NodeType.URL:
+      return issueBadgeOrLink(node.url, node.label ? renderMrkdwnList(node.label, ctx) : node.url, ctx);
+    case NodeType.UserLink: {
+      const resolved = ctx.mentionNames[node.userID];
+      return (
+        <span className="mrkdwn-mention">@{node.label ? renderMrkdwnList(node.label, ctx) : (resolved ?? node.userID)}</span>
+      );
+    }
+    case NodeType.ChannelLink:
+      return <span className="mrkdwn-mention">#{node.label ? renderMrkdwnList(node.label, ctx) : node.channelID}</span>;
+    case NodeType.Command:
+      return <span className="mrkdwn-mention">@{node.label ? renderMrkdwnList(node.label, ctx) : node.name}</span>;
+    case NodeType.Emoji: {
+      const char = getEmoji(node.name);
+      return <span title={`:${node.name}:`}>{char ?? `:${node.name}:`}</span>;
+    }
+  }
+}
+
+function renderMrkdwn(text: string, linearIssues: LinearIssueRef[], mentionNames: Record<string, string | null>): JSX.Element {
+  return <>{renderMrkdwnList(parse(text).children, { linearIssues, mentionNames })}</>;
 }
 
 const MIME_TAGS: Record<string, string> = {
@@ -155,14 +219,26 @@ function fileTypeTag(mimeType: string, originalName: string): string {
   return "FILE";
 }
 
-function FileBadge({ file }: { file: MessageFile }) {
+function FileBadge({ file, apiBase }: { file: MessageFile; apiBase: string }) {
   const modifier = file.status === "failed" ? "file-badge--failed" : file.status === "pending" ? "file-badge--pending" : "";
-  return (
-    <span className={`file-badge ${modifier}`.trim()} title={file.mimeType}>
+  const inner = (
+    <>
       <span className="file-badge-type">{fileTypeTag(file.mimeType, file.originalName)}</span>
       <span className="file-badge-name">{file.originalName}</span>
       {file.status === "failed" && " · upload failed"}
-    </span>
+    </>
+  );
+  if (file.status !== "stored") {
+    return (
+      <span className={`file-badge ${modifier}`.trim()} title={file.mimeType}>
+        {inner}
+      </span>
+    );
+  }
+  return (
+    <a className="file-badge" title={file.mimeType} href={`${apiBase}/files/${file.id}`} target="_blank" rel="noopener noreferrer">
+      {inner}
+    </a>
   );
 }
 
@@ -183,6 +259,7 @@ export function NamespaceDetail({
 }) {
   const [messages, setMessages] = useState<MessageRow[] | null>(null);
   const [linearIssues, setLinearIssues] = useState<LinearIssueRef[]>([]);
+  const [mentionNames, setMentionNames] = useState<Record<string, string | null>>({});
   const [unauthorized, setUnauthorized] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -199,6 +276,7 @@ export function NamespaceDetail({
       const body: NamespaceMessagesResponse = await res.json();
       setMessages(body.messages);
       setLinearIssues(body.linearIssues);
+      setMentionNames(body.mentionNames);
     });
   }, [namespaceId, apiBase]);
 
@@ -241,11 +319,11 @@ export function NamespaceDetail({
                         </time>
                       </div>
                     )}
-                    {m.text && <p className="message-row-text">{linkifyText(m.text, linearIssues)}</p>}
+                    {m.text && <p className="message-row-text">{renderMrkdwn(m.text, linearIssues, mentionNames)}</p>}
                     {m.files.length > 0 && (
                       <div className="message-files">
                         {m.files.map((f) => (
-                          <FileBadge key={f.id} file={f} />
+                          <FileBadge key={f.id} file={f} apiBase={apiBase} />
                         ))}
                       </div>
                     )}

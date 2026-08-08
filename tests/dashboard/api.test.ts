@@ -241,6 +241,114 @@ describe("dashboard API", () => {
     expect(res.body.linearIssues).toEqual([]);
   });
 
+  it("GET /namespaces/:id/messages resolves names for users mentioned in text, not just message authors", async () => {
+    const app = buildTestApp();
+    const workspace = await seedWorkspace("T7-MENTIONS");
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.1" })
+      .returning();
+    await db
+      .insert(messages)
+      .values({ namespaceId: namespace.id, slackUserId: "U1", text: "hey <@U0BN6EB79QT> take a look", slackTs: "1.1" });
+    const cookie = await claimSessionCookie(app, workspace.id);
+
+    const res = await request(app).get(`/api/dashboard/namespaces/${namespace.id}/messages`).set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.mentionNames).toHaveProperty("U1");
+    expect(res.body.mentionNames).toHaveProperty("U0BN6EB79QT");
+  });
+
+  describe("GET /files/:id", () => {
+    it("redirects to a signed URL for a stored file in the caller's workspace", async () => {
+      const app = buildTestApp();
+      const workspace = await seedWorkspace("T-FILE1");
+      const [namespace] = await db
+        .insert(namespaces)
+        .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.0" })
+        .returning();
+      const [message] = await db
+        .insert(messages)
+        .values({ namespaceId: namespace.id, slackUserId: "U1", text: "hi", slackTs: "1.0" })
+        .returning();
+      const [file] = await db
+        .insert(files)
+        .values({ messageId: message.id, bucketKey: `messages/${message.id}/f1-report.txt`, originalName: "report.txt", mimeType: "text/plain", status: "stored" })
+        .returning();
+      const cookie = await claimSessionCookie(app, workspace.id);
+
+      const res = await request(app).get(`/api/dashboard/files/${file.id}`).set("Cookie", cookie);
+      expect(res.status).toBe(302);
+      expect(typeof res.headers.location).toBe("string");
+      expect(res.headers.location.length).toBeGreaterThan(0);
+    });
+
+    it("404s with no cookie", async () => {
+      const app = buildTestApp();
+      const res = await request(app).get(`/api/dashboard/files/${crypto.randomUUID()}`);
+      expect(res.status).toBe(401);
+    });
+
+    it("404s for a malformed id", async () => {
+      const app = buildTestApp();
+      const workspace = await seedWorkspace("T-FILE2");
+      const cookie = await claimSessionCookie(app, workspace.id);
+      const res = await request(app).get("/api/dashboard/files/not-a-uuid").set("Cookie", cookie);
+      expect(res.status).toBe(404);
+    });
+
+    it("404s for a file id that doesn't exist", async () => {
+      const app = buildTestApp();
+      const workspace = await seedWorkspace("T-FILE3");
+      const cookie = await claimSessionCookie(app, workspace.id);
+      const res = await request(app).get(`/api/dashboard/files/${crypto.randomUUID()}`).set("Cookie", cookie);
+      expect(res.status).toBe(404);
+    });
+
+    it("404s for a file whose namespace belongs to another workspace", async () => {
+      const app = buildTestApp();
+      const workspace = await seedWorkspace("T-FILE4");
+      const otherWorkspace = await seedWorkspace("T-FILE4-OTHER");
+      const [otherNamespace] = await db
+        .insert(namespaces)
+        .values({ workspaceId: otherWorkspace.id, channelId: "C1", threadTs: "1.0" })
+        .returning();
+      const [otherMessage] = await db
+        .insert(messages)
+        .values({ namespaceId: otherNamespace.id, slackUserId: "U1", text: "hi", slackTs: "1.0" })
+        .returning();
+      const [otherFile] = await db
+        .insert(files)
+        .values({ messageId: otherMessage.id, bucketKey: "k", originalName: "secret.txt", mimeType: "text/plain", status: "stored" })
+        .returning();
+      const cookie = await claimSessionCookie(app, workspace.id);
+
+      const res = await request(app).get(`/api/dashboard/files/${otherFile.id}`).set("Cookie", cookie);
+      expect(res.status).toBe(404);
+    });
+
+    it("404s for a file that hasn't finished uploading yet", async () => {
+      const app = buildTestApp();
+      const workspace = await seedWorkspace("T-FILE5");
+      const [namespace] = await db
+        .insert(namespaces)
+        .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.0" })
+        .returning();
+      const [message] = await db
+        .insert(messages)
+        .values({ namespaceId: namespace.id, slackUserId: "U1", text: "hi", slackTs: "1.0" })
+        .returning();
+      const [pendingFile] = await db
+        .insert(files)
+        .values({ messageId: message.id, originalName: "uploading.txt", mimeType: "text/plain", status: "pending" })
+        .returning();
+      const cookie = await claimSessionCookie(app, workspace.id);
+
+      const res = await request(app).get(`/api/dashboard/files/${pendingFile.id}`).set("Cookie", cookie);
+      expect(res.status).toBe(404);
+    });
+  });
+
   it("GET /namespaces/:id/messages returns 404 for a namespace owned by another workspace", async () => {
     const app = buildTestApp();
     const workspaceA = await seedWorkspace("T8A");

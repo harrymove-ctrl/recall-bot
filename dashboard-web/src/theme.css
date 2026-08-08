@@ -295,6 +295,45 @@ a:hover {
   vertical-align: -1px;
 }
 
+.mrkdwn-mention {
+  display: inline;
+  border-radius: 3px;
+  padding: 0 3px;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.mrkdwn-code {
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.mrkdwn-pre {
+  margin: var(--space-1) 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  overflow-x: auto;
+}
+.mrkdwn-pre code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  white-space: pre;
+}
+
+.mrkdwn-quote {
+  margin: var(--space-1) 0;
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
 .analytics-bar-wrap {
   display: inline-flex;
   align-items: center;

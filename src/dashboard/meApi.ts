@@ -9,6 +9,8 @@ import { createUserSessionCookie } from "./userSession.js";
 import { USER_SESSION_COOKIE_NAME, requireUserSession, type UserSessionRequest } from "./userAuth.js";
 import { linearIssueUrl } from "../slack/linearLinks.js";
 import { resolveDisplayNames } from "../slack/userProfiles.js";
+import { extractMentionedUserIds } from "../slack/mentions.js";
+import { getSignedDownloadUrl } from "../storage/bucket.js";
 
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days — matches the admin session's default
 
@@ -121,7 +123,9 @@ export function createMeApiRouter(db: Database, userSessionSecret: string): Rout
     const issueRows = await db.select().from(namespaceLinearIssues).where(eq(namespaceLinearIssues.namespaceId, namespace.id));
     const linearIssues = issueRows.map((issue) => ({ identifier: issue.issueIdentifier, url: linearIssueUrl(issue) }));
 
-    const slackUserIds = [...new Set(messageRows.map((m) => m.slackUserId))];
+    const slackUserIds = [
+      ...new Set(messageRows.flatMap((m) => [m.slackUserId, ...extractMentionedUserIds(m.text)])),
+    ];
     const profiles = await resolveDisplayNames(db, req.workspaceId!, slackUserIds);
 
     res.json({
@@ -144,7 +148,40 @@ export function createMeApiRouter(db: Database, userSessionSecret: string): Rout
         };
       }),
       linearIssues,
+      mentionNames: Object.fromEntries([...profiles].map(([id, p]) => [id, p.displayName])),
     });
+  });
+
+  // Mints a fresh signed download URL on every request rather than embedding one in the
+  // /namespaces/:id/messages payload above, so a dashboard tab left open past the signed URL's
+  // expiry still works on click — mirrors the admin-view equivalent in api.ts, but scoped via
+  // findParticipantNamespace (participation, not just workspace membership) like every other
+  // personal-view route.
+  router.get("/files/:id", auth, async (req: UserSessionRequest, res: Response) => {
+    const fileId = String(req.params.id);
+    if (!UUID_RE.test(fileId)) {
+      res.status(404).json({ error: "file_not_found" });
+      return;
+    }
+
+    const [row] = await db
+      .select({ file: files, namespaceId: messages.namespaceId })
+      .from(files)
+      .innerJoin(messages, eq(files.messageId, messages.id))
+      .where(eq(files.id, fileId));
+    if (!row) {
+      res.status(404).json({ error: "file_not_found" });
+      return;
+    }
+
+    const namespace = await findParticipantNamespace(db, req.workspaceId!, req.slackUserId!, row.namespaceId);
+    if (!namespace || row.file.status !== "stored" || !row.file.bucketKey) {
+      res.status(404).json({ error: "file_not_found" });
+      return;
+    }
+
+    const url = await getSignedDownloadUrl(row.file.bucketKey);
+    res.redirect(302, url);
   });
 
   return router;
