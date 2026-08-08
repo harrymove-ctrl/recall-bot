@@ -345,6 +345,11 @@ function Dashboard() {
     reload();
   };
 
+  const logout = async () => {
+    await fetch("/api/dashboard/logout", { method: "POST" });
+    setUnauthorized(true);
+  };
+
   const tabs: MorphingTabsItem[] = [
     {
       id: "namespaces",
@@ -357,7 +362,9 @@ function Dashboard() {
 
   return (
     <div>
-      <h1>{workspace.name}</h1>
+      <h1>
+        {workspace.name} — <button onClick={logout}>Log out</button>
+      </h1>
       <p>
         Slack team {workspace.slackTeamId} — installed{" "}
         {workspace.installedAt ? new Date(workspace.installedAt).toLocaleDateString() : "unknown"}

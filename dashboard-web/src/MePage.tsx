@@ -113,10 +113,18 @@ export function PersonalDashboard() {
   if (unauthorized) return <MeNoSession />;
   if (!identity) return <p>Loading…</p>;
 
+  const logout = async () => {
+    await fetch("/api/me/logout", { method: "POST" });
+    setIdentity(null);
+    setUnauthorized(true);
+  };
+
   return (
     <div>
       <h1>Your captured threads</h1>
-      <p>Signed in as {identity.displayName ?? identity.slackUserId}</p>
+      <p>
+        Signed in as {identity.displayName ?? identity.slackUserId} — <button onClick={logout}>Log out</button>
+      </p>
       <PersonalNamespacesTable namespaces={namespaces} />
     </div>
   );
