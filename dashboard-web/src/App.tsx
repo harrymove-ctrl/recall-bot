@@ -112,13 +112,15 @@ function McpEndpointBox({ origin }: { origin: string }) {
       <div className="mcp-box-label">MCP Endpoint</div>
       <div className="mcp-box-row">
         <code className="mcp-box-url">{mcpUrl}</code>
-        <button
-          type="button"
-          className={`btn-copy${copied ? " btn-copy--copied" : ""}`}
-          onClick={() => copy(mcpUrl)}
-        >
-          {copied ? "✓ Copied" : "Copy"}
-        </button>
+        <span className={`tooltip-wrap${copied ? " tooltip-yellow" : ""}`} data-tooltip={copied ? "Copied!" : "Copy MCP URL"}>
+          <button
+            type="button"
+            className={`btn-copy${copied ? " btn-copy--copied" : ""}`}
+            onClick={() => copy(mcpUrl)}
+          >
+            {copied ? "✓ Copied" : "Copy"}
+          </button>
+        </span>
       </div>
       <div className="mcp-box-hint">Use this URL to connect AI agents via the MCP protocol</div>
     </div>
@@ -140,9 +142,11 @@ function GettingStartedSteps({ origin }: { origin: string }) {
       </li>
       <li>
         Point an MCP-capable agent at <code>{mcpUrl}</code> using that key as a Bearer token.{" "}
-        <button type="button" className={`btn-copy${copied ? " btn-copy--copied" : ""}`} onClick={() => copy(mcpUrl)}>
-          {copied ? "Copied" : "Copy URL"}
-        </button>
+        <span className={`tooltip-wrap${copied ? " tooltip-yellow" : ""}`} data-tooltip={copied ? "Copied!" : "Copy MCP URL"}>
+          <button type="button" className={`btn-copy${copied ? " btn-copy--copied" : ""}`} onClick={() => copy(mcpUrl)}>
+            {copied ? "Copied" : "Copy URL"}
+          </button>
+        </span>
       </li>
     </ol>
   );
@@ -303,37 +307,45 @@ function NamespacesTable({
                 </td>
                 <td>
                   <div className="table-cell-actions">
-                    <a href={`/dashboard/namespaces/${n.id}`} className="btn-brutal btn-brutal-sm btn-brutal-ghost">
-                      View
-                    </a>
-                    <button
-                      type="button"
-                      className={`btn-brutal btn-brutal-sm${copiedId === `agent-${n.id}` ? " btn-brutal-yellow" : ""}`}
-                      onClick={() => {
-                        const snippet = buildAgentSnippet(n.id, n.label ?? null);
-                        navigator.clipboard?.writeText(snippet).catch(() => {});
-                        setCopiedId(`agent-${n.id}`);
-                        setTimeout(() => setCopiedId(null), 1800);
-                      }}
-                    >
-                      {copiedId === `agent-${n.id}` ? "✓ Copied!" : "Copy Agent"}
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-brutal btn-brutal-sm${copiedId === `link-${n.id}` ? " btn-brutal-yellow" : ""}`}
-                      onClick={() => {
-                        const md = buildLinkMd(n.id, n.label ?? null, origin);
-                        navigator.clipboard?.writeText(md).catch(() => {});
-                        setCopiedId(`link-${n.id}`);
-                        setTimeout(() => setCopiedId(null), 1800);
-                      }}
-                    >
-                      {copiedId === `link-${n.id}` ? "✓ Copied!" : "Link MD"}
-                    </button>
-                    {n.status !== "archived" && (
-                      <button type="button" className="btn-brutal btn-brutal-sm btn-brutal-ghost" onClick={() => onArchive(n.id)}>
-                        Archive
+                    <span className="tooltip-wrap" data-tooltip="View thread messages">
+                      <a href={`/dashboard/namespaces/${n.id}`} className="btn-brutal btn-brutal-sm btn-brutal-ghost">
+                        View
+                      </a>
+                    </span>
+                    <span className="tooltip-wrap" data-tooltip="Copy MCP agent snippet">
+                      <button
+                        type="button"
+                        className={`btn-brutal btn-brutal-sm${copiedId === `agent-${n.id}` ? " btn-brutal-yellow" : ""}`}
+                        onClick={() => {
+                          const snippet = buildAgentSnippet(n.id, n.label ?? null);
+                          navigator.clipboard?.writeText(snippet).catch(() => {});
+                          setCopiedId(`agent-${n.id}`);
+                          setTimeout(() => setCopiedId(null), 1800);
+                        }}
+                      >
+                        {copiedId === `agent-${n.id}` ? "✓ Copied!" : "Copy Agent"}
                       </button>
+                    </span>
+                    <span className="tooltip-wrap" data-tooltip="Copy markdown link">
+                      <button
+                        type="button"
+                        className={`btn-brutal btn-brutal-sm${copiedId === `link-${n.id}` ? " btn-brutal-yellow" : ""}`}
+                        onClick={() => {
+                          const md = buildLinkMd(n.id, n.label ?? null, origin);
+                          navigator.clipboard?.writeText(md).catch(() => {});
+                          setCopiedId(`link-${n.id}`);
+                          setTimeout(() => setCopiedId(null), 1800);
+                        }}
+                      >
+                        {copiedId === `link-${n.id}` ? "✓ Copied!" : "Link MD"}
+                      </button>
+                    </span>
+                    {n.status !== "archived" && (
+                      <span className="tooltip-wrap" data-tooltip="Archive this thread">
+                        <button type="button" className="btn-brutal btn-brutal-sm btn-brutal-ghost" onClick={() => onArchive(n.id)}>
+                          Archive
+                        </button>
+                      </span>
                     )}
                   </div>
                 </td>
@@ -488,33 +500,39 @@ function MemoriesTable({ memories }: { memories: MemoryRow[] }) {
                 </div>
               </div>
               <div className="row-card-actions">
-                <a href={`/dashboard/namespaces/${m.id}`} className="btn-brutal btn-brutal-sm btn-brutal-ghost">
-                  View
-                </a>
-                <button
-                  type="button"
-                  className={`btn-brutal btn-brutal-sm${copiedId === `agent-${m.id}` ? " btn-brutal-yellow" : ""}`}
-                  onClick={() => {
-                    const snippet = buildAgentSnippet(m.id, m.label ?? null);
-                    navigator.clipboard?.writeText(snippet).catch(() => {});
-                    setCopiedId(`agent-${m.id}`);
-                    setTimeout(() => setCopiedId(null), 1800);
-                  }}
-                >
-                  {copiedId === `agent-${m.id}` ? "✓ Copied!" : "Copy Agent"}
-                </button>
-                <button
-                  type="button"
-                  className={`btn-brutal btn-brutal-sm${copiedId === `link-${m.id}` ? " btn-brutal-yellow" : ""}`}
-                  onClick={() => {
-                    const md = buildLinkMd(m.id, m.label ?? null, origin);
-                    navigator.clipboard?.writeText(md).catch(() => {});
-                    setCopiedId(`link-${m.id}`);
-                    setTimeout(() => setCopiedId(null), 1800);
-                  }}
-                >
-                  {copiedId === `link-${m.id}` ? "✓ Copied!" : "Link MD"}
-                </button>
+                <span className="tooltip-wrap" data-tooltip="View thread messages">
+                  <a href={`/dashboard/namespaces/${m.id}`} className="btn-brutal btn-brutal-sm btn-brutal-ghost">
+                    View
+                  </a>
+                </span>
+                <span className="tooltip-wrap" data-tooltip="Copy MCP agent snippet">
+                  <button
+                    type="button"
+                    className={`btn-brutal btn-brutal-sm${copiedId === `agent-${m.id}` ? " btn-brutal-yellow" : ""}`}
+                    onClick={() => {
+                      const snippet = buildAgentSnippet(m.id, m.label ?? null);
+                      navigator.clipboard?.writeText(snippet).catch(() => {});
+                      setCopiedId(`agent-${m.id}`);
+                      setTimeout(() => setCopiedId(null), 1800);
+                    }}
+                  >
+                    {copiedId === `agent-${m.id}` ? "✓ Copied!" : "Copy Agent"}
+                  </button>
+                </span>
+                <span className="tooltip-wrap" data-tooltip="Copy markdown link">
+                  <button
+                    type="button"
+                    className={`btn-brutal btn-brutal-sm${copiedId === `link-${m.id}` ? " btn-brutal-yellow" : ""}`}
+                    onClick={() => {
+                      const md = buildLinkMd(m.id, m.label ?? null, origin);
+                      navigator.clipboard?.writeText(md).catch(() => {});
+                      setCopiedId(`link-${m.id}`);
+                      setTimeout(() => setCopiedId(null), 1800);
+                    }}
+                  >
+                    {copiedId === `link-${m.id}` ? "✓ Copied!" : "Link MD"}
+                  </button>
+                </span>
               </div>
             </div>
           ))}
@@ -637,14 +655,16 @@ function Dashboard() {
           <span className="nav-bar-brand-name">Recall Bot</span>
         </a>
         <div className="nav-bar-actions">
-          <button type="button" className="btn-brutal btn-brutal-sm btn-brutal-ghost" onClick={logout}>
-            Log out
-          </button>
+          <span className="tooltip-wrap" data-tooltip="Sign out of dashboard">
+            <button type="button" className="btn-brutal btn-brutal-sm btn-brutal-ghost" onClick={logout}>
+              Log out
+            </button>
+          </span>
         </div>
       </nav>
 
+      {/* Page header */}
       <div className="page">
-        {/* Page header */}
         <h1 className="heading-xl">{workspace.name}</h1>
         <p className="subtitle">{subtitle}</p>
 

@@ -902,6 +902,75 @@ a:hover {
   margin-top: 4px;
 }
 
+/* ── Tooltips (CSS-only, data-tooltip attribute) ── */
+
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-wrap[data-tooltip]:hover::after,
+.tooltip-wrap[data-tooltip]:focus-within::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: #000000;
+  color: #ffffff;
+  border: 1.5px solid #000000;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 2px 2px 0 #000000;
+}
+
+/* Arrow */
+.tooltip-wrap[data-tooltip]:hover::before,
+.tooltip-wrap[data-tooltip]:focus-within::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 1px);
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: #000000;
+  border-right: 1.5px solid #000000;
+  border-bottom: 1.5px solid #000000;
+  z-index: 9998;
+}
+
+/* Yellow variant */
+.tooltip-wrap.tooltip-yellow[data-tooltip]:hover::after,
+.tooltip-wrap.tooltip-yellow[data-tooltip]:focus-within::after {
+  background: var(--color-yellow);
+  color: #000000;
+  border-color: #000000;
+}
+.tooltip-wrap.tooltip-yellow[data-tooltip]:hover::before,
+.tooltip-wrap.tooltip-yellow[data-tooltip]:focus-within::before {
+  background: var(--color-yellow);
+  border-color: #000000;
+}
+
+/* Fade-in animation */
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.tooltip-wrap[data-tooltip]:hover::after,
+.tooltip-wrap[data-tooltip]:focus-within::after {
+  animation: tooltip-in 0.12s ease-out forwards;
+}
+
 /* ── Code blocks ── */
 
 .code-brutal {
