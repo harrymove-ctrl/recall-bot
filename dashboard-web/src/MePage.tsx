@@ -60,31 +60,33 @@ function MeNoSession() {
 
 function PersonalNamespacesTable({ namespaces }: { namespaces: PersonalNamespaceRow[] }) {
   if (namespaces.length === 0) {
-    return <p>No captured threads yet — tag @recall-bot on a Slack thread you're part of.</p>;
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">💬</div>
+        No captured threads yet — tag @recall-bot on a Slack thread you're part of.
+      </div>
+    );
   }
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>Label</th>
-          <th>Channel</th>
-          <th>Created</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {namespaces.map((n) => (
-          <tr key={n.id}>
-            <td>{n.label ?? n.threadTs}</td>
-            <td>{n.channelId}</td>
-            <td>{new Date(n.createdAt).toLocaleDateString()}</td>
-            <td>
-              <a href={`/dashboard/me/namespaces/${n.id}`}>View</a>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      {namespaces.map((n) => (
+        <div key={n.id} className="row-card">
+          <div className="row-card-icon">💬</div>
+          <div className="row-card-body">
+            <div className="row-card-title">{n.label ?? n.threadTs}</div>
+            <div className="row-card-sub">
+              #{n.channelId} · {new Date(n.createdAt).toLocaleDateString()}
+              {n.status === "archived" && " · archived"}
+            </div>
+          </div>
+          <div className="row-card-actions">
+            <a href={`/dashboard/me/namespaces/${n.id}`} className="btn-brutal btn-brutal-sm btn-brutal-ghost">
+              View
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -121,11 +123,27 @@ export function PersonalDashboard() {
 
   return (
     <div>
-      <h1>Your captured threads</h1>
-      <p>
-        Signed in as {identity.displayName ?? identity.slackUserId} — <button onClick={logout}>Log out</button>
-      </p>
-      <PersonalNamespacesTable namespaces={namespaces} />
+      {/* Nav bar */}
+      <nav className="nav-bar">
+        <a href="/dashboard/me" className="nav-bar-brand">
+          <div className="nav-bar-brand-icon">R</div>
+          <span className="nav-bar-brand-name">Recall Bot</span>
+        </a>
+        <div className="nav-bar-actions">
+          <button type="button" className="btn-brutal btn-brutal-sm btn-brutal-ghost" onClick={logout}>
+            Log out
+          </button>
+        </div>
+      </nav>
+
+      <div className="page">
+        <h1 className="heading-xl">Your Captured Threads</h1>
+        <p className="subtitle">
+          Signed in as {identity.displayName ?? identity.slackUserId} · {namespaces.length} thread{ namespaces.length !== 1 ? "s" : ""}
+        </p>
+
+        <PersonalNamespacesTable namespaces={namespaces} />
+      </div>
     </div>
   );
 }

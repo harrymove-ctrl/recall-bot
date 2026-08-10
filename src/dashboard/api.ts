@@ -284,5 +284,58 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
     res.json(rows);
   });
 
+  // Returns all namespaces with per-namespace memory/file stats — used by the Memories tab.
+  router.get("/memories", auth, async (req: DashboardRequest, res: Response) => {
+    const rows = await db
+      .select({
+        id: namespaces.id,
+        channelId: namespaces.channelId,
+        threadTs: namespaces.threadTs,
+        label: namespaces.label,
+        status: namespaces.status,
+        createdAt: namespaces.createdAt,
+      })
+      .from(namespaces)
+      .where(eq(namespaces.workspaceId, req.workspaceId!))
+      .orderBy(desc(namespaces.createdAt));
+
+    const namespaceIds = rows.map((n) => n.id);
+    if (namespaceIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    // Count messages + files per namespace in a single query
+    const [messageCounts, fileCounts] = await Promise.all([
+      db
+        .select({ namespaceId: messages.namespaceId, count: count(messages.id) })
+        .from(messages)
+        .where(inArray(messages.namespaceId, namespaceIds))
+        .groupBy(messages.namespaceId),
+      db
+        .select({ namespaceId: messages.namespaceId, count: count(files.id) })
+        .from(files)
+        .innerJoin(messages, eq(files.messageId, messages.id))
+        .where(inArray(messages.namespaceId, namespaceIds))
+        .groupBy(messages.namespaceId),
+    ]);
+
+    const messageCountMap = new Map(messageCounts.map((r) => [r.namespaceId, r.count]));
+    const fileCountMap = new Map(fileCounts.map((r) => [r.namespaceId ?? '', r.count]));
+
+    res.json(
+      rows.map((n) => ({
+        id: n.id,
+        channelId: n.channelId,
+        threadTs: n.threadTs,
+        label: n.label,
+        status: n.status,
+        createdAt: n.createdAt,
+        messageCount: messageCountMap.get(n.id) ?? 0,
+        fileCount: fileCountMap.get(n.id) ?? 0,
+      })),
+    );
+  });
+
   return router;
 }
