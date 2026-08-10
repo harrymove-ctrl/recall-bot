@@ -27,6 +27,7 @@ const SCOPES = [
   "im:write",
   "files:read",
   "commands",
+  "users:read",
 ];
 
 async function sendClaimLinkDm(db: Database, publicBaseUrl: string, teamId: string, botToken: string, installerUserId: string) {
