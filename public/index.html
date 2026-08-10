@@ -4,234 +4,629 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>recall-bot — Turn threads into memory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
   <style>
     :root {
-      --color-bg: #ffffff;
-      --color-surface: #fafafa;
-      --color-text: #111111;
-      --color-text-muted: #666666;
-      --color-border: #dddddd;
-      --color-accent: #2563eb;
-      --space-1: 4px;
-      --space-2: 8px;
-      --space-3: 16px;
-      --space-4: 24px;
-      --space-5: 40px;
-      --font-serif: Georgia, "Times New Roman", serif;
-      --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --color-yellow: #ffdc58;
+      --color-yellow-hover: #ffd12e;
+      --color-black: #000000;
+      --color-white: #ffffff;
+      --font-head: 'Archivo Black', sans-serif;
+      --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+      --shadow-brutal: 3px 3px 0 #000000;
+      --shadow-brutal-sm: 2px 2px 0 #000000;
+      --shadow-brutal-xs: 1px 1px 0 #000000;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: var(--color-bg);
-      color: var(--color-text);
+      background: var(--color-yellow);
+      color: var(--color-black);
       font-family: var(--font-sans);
       font-size: 14px;
       line-height: 1.5;
+      overflow-x: hidden;
     }
 
-    h1 {
-      font-family: var(--font-serif);
-      font-weight: 400;
-      margin: 0 0 var(--space-2) 0;
-      font-size: 28px;
+    /* ── Nav ── */
+
+    .nb-nav {
+      background: var(--color-yellow);
+      border-bottom: 3px solid var(--color-black);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
-    h2 {
-      font-family: var(--font-serif);
-      font-weight: 400;
-      font-size: 18px;
-      margin: var(--space-5) 0 var(--space-3) 0;
-    }
-
-    a {
-      color: var(--color-accent);
+    .nb-nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       text-decoration: none;
+      color: var(--color-black);
     }
 
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .page {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: var(--space-5) var(--space-4);
-    }
-
-    #install-error {
-      background: #fee;
-      border: 1px solid #fcc;
-      color: #c33;
-      padding: var(--space-3);
-      margin-bottom: var(--space-4);
-      border-radius: 3px;
-    }
-
-    .hero {
-      margin-bottom: var(--space-5);
-    }
-
-    .hero-subline {
-      color: var(--color-text-muted);
-      margin: var(--space-2) 0 var(--space-4) 0;
+    .nb-nav-brand-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--color-black);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-yellow);
+      font-family: var(--font-head);
       font-size: 16px;
     }
 
-    .cta-section {
+    .nb-nav-brand-name {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .nb-nav-actions {
       display: flex;
-      gap: var(--space-4);
-      margin-bottom: var(--space-5);
-      align-items: flex-start;
+      gap: 10px;
     }
 
-    .cta-button-wrap {
-      flex-shrink: 0;
-    }
-
-    .cta-button {
-      display: inline-block;
-      background: var(--color-accent);
-      color: white;
-      padding: var(--space-2) var(--space-3);
-      border-radius: 3px;
-      font-size: 14px;
-      font-weight: 500;
-      border: none;
+    .nb-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border: 2px solid var(--color-black);
+      background: var(--color-black);
+      color: var(--color-yellow);
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 700;
       cursor: pointer;
+      box-shadow: var(--shadow-brutal-sm);
+      transition: transform 0.1s, box-shadow 0.1s;
+      white-space: nowrap;
       text-decoration: none;
     }
 
-    .cta-button:hover {
-      opacity: 0.9;
-      text-decoration: none;
+    .nb-btn:hover { transform: translate(2px, 2px); box-shadow: none; }
+    .nb-btn-yellow { background: var(--color-yellow); color: var(--color-black); }
+    .nb-btn-outline { background: transparent; color: var(--color-black); box-shadow: none; }
+
+    /* ── Page ── */
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 64px 32px 96px;
     }
 
-    .admin-callout {
-      border: 1px solid var(--color-border);
-      padding: var(--space-3);
-      background: var(--color-surface);
-      border-radius: 3px;
-      flex: 1;
-      font-size: 14px;
-      line-height: 1.6;
+    /* ── Hero ── */
+
+    .hero {
+      text-align: center;
+      margin-bottom: 72px;
     }
 
-    .steps {
-      margin-bottom: var(--space-5);
+    .hero h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.03em;
+      margin: 0 0 24px;
+      color: var(--color-black);
     }
 
-    .step {
-      margin-bottom: var(--space-4);
-      padding-left: var(--space-3);
-      position: relative;
-    }
-
-    .step::before {
-      content: attr(data-step);
-      position: absolute;
-      left: 0;
-      top: 0;
-      font-weight: 600;
-      color: var(--color-accent);
-    }
-
-    .step-title {
+    .hero-subline {
+      font-size: 1.2rem;
       font-weight: 500;
-      margin-bottom: var(--space-1);
+      max-width: 660px;
+      margin: 0 auto 40px;
+      line-height: 1.4;
     }
 
-    .step-description {
-      color: var(--color-text-muted);
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
+
+    .hero-cta .nb-btn {
+      padding: 14px 32px;
+      font-size: 1.05rem;
+    }
+
+    /* ── MCP bar (always visible) ── */
+
+    .mcp-bar {
+      background: var(--color-black);
+      border: 3px solid var(--color-black);
+      box-shadow: var(--shadow-brutal);
+      padding: 14px 20px;
+      max-width: 760px;
+      margin: 0 auto 80px;
+    }
+
+    .mcp-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .mcp-bar-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-yellow);
+      margin-bottom: 4px;
+      font-family: var(--font-sans);
+    }
+
+    .mcp-bar-url {
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      color: var(--color-yellow);
+      word-break: break-all;
+    }
+
+    .mcp-bar-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border: 1.5px solid var(--color-yellow);
+      background: var(--color-yellow);
+      color: var(--color-black);
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
+    }
+    .mcp-bar-copy:hover { background: var(--color-yellow-hover); }
+    .mcp-bar-copy.copied { background: #166534; border-color: #166534; color: white; }
+
+    /* ── Stats row ── */
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+
+    .stat-tile {
+      background: var(--color-white);
+      border: 2px solid var(--color-black);
+      border-radius: 8px;
+      box-shadow: var(--shadow-brutal);
+      padding: 18px 22px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .stat-tile:hover { transform: translate(3px, 3px); box-shadow: none; }
+    .stat-tile-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .stat-tile-value {
+      font-family: var(--font-head);
+      font-size: 2.1rem;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .stat-tile-hint { font-size: 0.72rem; font-weight: 600; color: #555; margin-top: 6px; }
+    .stat-tile-yellow { background: var(--color-yellow); }
+    .stat-tile::after {
+      content: "";
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 80px;
+      height: 80px;
+      background: var(--color-yellow);
+      border: 2px solid var(--color-black);
+      border-radius: 50%;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .stat-tile-yellow::after { background: var(--color-black); opacity: 0.18; }
+
+    /* ── Steps ── */
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .section-heading-dot {
+      width: 14px;
+      height: 14px;
+      background: var(--color-yellow);
+      border: 2px solid var(--color-black);
+    }
+
+    .section-heading-text {
+      font-family: var(--font-head);
+      font-size: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-bottom: 72px;
+    }
+
+    .step-card {
+      background: var(--color-white);
+      border: 2px solid var(--color-black);
+      border-radius: 8px;
+      box-shadow: var(--shadow-brutal);
+      padding: 22px 24px;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .step-card:hover { transform: translate(3px, 3px); box-shadow: none; }
+
+    .step-card-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      background: var(--color-black);
+      color: var(--color-yellow);
+      border-radius: 6px;
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+    }
+
+    .step-card h3 {
+      font-family: var(--font-head);
+      font-size: 1.05rem;
+      line-height: 1.2;
+      margin: 0 0 8px;
+    }
+
+    .step-card p {
+      color: #444;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* ── Alert ── */
+
+    .alert {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 14px 18px;
+      border: 2px solid var(--color-black);
+      box-shadow: var(--shadow-brutal-sm);
+      margin-bottom: 24px;
+      background: var(--color-white);
+    }
+
+    .alert-info { background: #d2e7ff; }
+    .alert-success { background: #b8e6c0; }
+    .alert-warn { background: #fff1b8; }
+
+    .alert-icon {
+      width: 26px;
+      height: 26px;
+      border: 2px solid var(--color-black);
+      background: var(--color-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-size: 14px;
+    }
+
+    .alert-title {
+      font-family: var(--font-head);
+      font-size: 0.95rem;
+      margin: 0 0 4px;
+    }
+
+    .alert-desc {
+      margin: 0;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    /* ── Footer ── */
 
     .footer {
-      border-top: 1px solid var(--color-border);
-      padding-top: var(--space-4);
-      color: var(--color-text-muted);
-      font-size: 12px;
+      border-top: 2px solid var(--color-black);
+      padding-top: 32px;
+      margin-top: 80px;
+    }
+
+    .footer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .footer-title {
+      font-family: var(--font-head);
+      font-size: 0.95rem;
     }
 
     .scopes-list {
       list-style: none;
       padding: 0;
-      margin: var(--space-2) 0 0 0;
+      margin: 0;
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-2);
+      gap: 8px;
     }
 
-    .scopes-list li {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      padding: var(--space-1) var(--space-2);
-      border-radius: 3px;
-      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    .scope-pill {
+      display: inline-flex;
+      padding: 4px 12px;
+      background: var(--color-white);
+      border: 1.5px solid var(--color-black);
+      border-radius: 4px;
+      box-shadow: 1px 1px 0 var(--color-black);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .kbd-brutal {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      background: var(--color-white);
+      border: 1.5px solid var(--color-black);
+      border-radius: 4px;
+      box-shadow: 1px 1px 0 var(--color-black);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    /* ── Admin callout ── */
+
+    .admin-callout {
+      display: flex;
+      gap: 14px;
+      align-items: start;
+      padding: 18px 22px;
+      background: var(--color-white);
+      border: 2px solid var(--color-black);
+      border-radius: 8px;
+      box-shadow: var(--shadow-brutal-sm);
+      margin-bottom: 40px;
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .admin-callout-icon {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--color-yellow);
+      border: 2px solid var(--color-black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-size: 16px;
+    }
+
+    /* ── Tooltips ── */
+
+    .tooltip-wrap { position: relative; display: inline-flex; }
+
+    .tooltip-wrap[data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      padding: 5px 10px;
+      background: #000000;
+      color: #ffffff;
+      border: 1.5px solid #000000;
+      font-family: var(--font-sans);
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 2px 2px 0 #000000;
+    }
+
+    /* ── Responsive ── */
+
+    @media (max-width: 640px) {
+      .nb-nav { padding: 0 16px; height: auto; min-height: 56px; flex-wrap: wrap; gap: 8px; padding-top: 12px; padding-bottom: 12px; }
+      .nb-nav-actions { width: 100%; justify-content: space-between; }
+      .page { padding: 40px 16px 64px; }
+      .hero h1 { font-size: 2.1rem; }
+      .hero-cta .nb-btn { padding: 12px 22px; font-size: 0.95rem; }
     }
   </style>
 </head>
 <body>
+  <!-- Nav -->
+  <nav class="nb-nav">
+    <a href="/" class="nb-nav-brand">
+      <div class="nb-nav-brand-icon">R</div>
+      <span class="nb-nav-brand-name">Recall Bot</span>
+    </a>
+    <div class="nb-nav-actions">
+      <a href="/dashboard" class="nb-btn nb-btn-outline">Dashboard</a>
+      <a href="/slack/install" class="nb-btn nb-btn-yellow">Add to Slack</a>
+    </div>
+  </nav>
+
   <div class="page">
-    <div id="install-error" hidden></div>
+    <div id="install-error" class="alert alert-warn" hidden style="display: none;">
+      <div class="alert-icon">!</div>
+      <div>
+        <h4 class="alert-title">Installation didn't complete</h4>
+        <p class="alert-desc">You may need workspace-admin approval, or the install was cancelled.</p>
+      </div>
+    </div>
 
+    <!-- Hero -->
     <div class="hero">
-      <h1>Turn any Slack thread into memory a coding agent can recall.</h1>
-      <p class="hero-subline">Tag @recall-bot to capture important threads, then let your coding agent search and retrieve them via MCP.</p>
-    </div>
-
-    <div class="cta-section">
-      <div class="cta-button-wrap">
-        <a href="/slack/install" class="cta-button">Add to Slack</a>
-      </div>
-      <div class="admin-callout">
-        Installing requires Slack workspace-admin permission or approval from whoever manages apps in your workspace. If that's not you, send this page to them — nothing is installed or configured until it clears Slack's own approval screen.
-      </div>
-    </div>
-
-    <h2>How it works</h2>
-    <div class="steps">
-      <div class="step" data-step="1.">
-        <div class="step-title">A workspace admin approves the requested scopes</div>
-        <div class="step-description">Your workspace administrator reviews and approves the permissions recall-bot needs to read threads and send you setup instructions.</div>
-      </div>
-      <div class="step" data-step="2.">
-        <div class="step-title">You get a one-time Slack DM with a dashboard setup link</div>
-        <div class="step-description">After approval, recall-bot sends you a direct message containing a link to set up your personal dashboard and connect your coding agent.</div>
-      </div>
-      <div class="step" data-step="3.">
-        <div class="step-title">Tag @recall-bot on any thread to capture it, or run /recall-key to get a delegate key</div>
-        <div class="step-description">Capture important threads by tagging the bot. Run /recall-key to get a delegate key that lets your coding agent connect via MCP and search or retrieve any captured thread for context-aware development.</div>
+      <h1>Turn Slack threads into memory a coding agent can recall.</h1>
+      <p class="hero-subline">Tag <span class="kbd-brutal">@recall-bot</span> to capture important threads, then let your coding agent search and retrieve them via MCP.</p>
+      <div class="hero-cta">
+        <span class="tooltip-wrap" data-tooltip="Install in your workspace">
+          <a href="/slack/install" class="nb-btn nb-btn-yellow">Add to Slack</a>
+        </span>
+        <span class="tooltip-wrap" data-tooltip="Open the admin dashboard">
+          <a href="/dashboard" class="nb-btn nb-btn-outline">Open Dashboard</a>
+        </span>
       </div>
     </div>
 
+    <!-- MCP endpoint bar -->
+    <div class="mcp-bar">
+      <div class="mcp-bar-label">MCP Endpoint</div>
+      <div class="mcp-bar-row">
+        <code class="mcp-bar-url" id="mcp-url">https://recall-bot-production-105d.up.railway.app/mcp</code>
+        <span class="tooltip-wrap" data-tooltip="Copy MCP URL">
+          <button type="button" class="mcp-bar-copy" id="mcp-copy">Copy</button>
+        </span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-row">
+      <div class="stat-tile stat-tile-yellow">
+        <div class="stat-tile-label">Recall</div>
+        <div class="stat-tile-value">1 Tool</div>
+        <div class="stat-tile-hint">via Model Context Protocol</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-tile-label">Capture</div>
+        <div class="stat-tile-value">Threads</div>
+        <div class="stat-tile-hint">full Slack thread content + files</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-tile-label">Agents</div>
+        <div class="stat-tile-value">Any</div>
+        <div class="stat-tile-hint">Cursor, Claude Code, Codex…</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-tile-label">Storage</div>
+        <div class="stat-tile-value">Cloud</div>
+        <div class="stat-tile-hint">signed download URLs</div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="section-heading">
+      <div class="section-heading-dot"></div>
+      <div class="section-heading-text">How it works</div>
+    </div>
+
+    <div class="steps-row">
+      <div class="step-card">
+        <div class="step-card-num">1</div>
+        <h3>Workspace admin approves scopes</h3>
+        <p>Your workspace administrator reviews and approves the permissions recall-bot needs to read threads and send you setup instructions.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-card-num">2</div>
+        <h3>You get a one-time Slack DM</h3>
+        <p>After approval, recall-bot sends you a direct message containing a link to set up your personal dashboard and connect your coding agent.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-card-num">3</div>
+        <h3>Tag <span class="kbd-brutal">@recall-bot</span> on threads</h3>
+        <p>Capture important threads by tagging the bot. Run <span class="kbd-brutal">/recall-key</span> to get a delegate key that lets your coding agent connect via MCP.</p>
+      </div>
+    </div>
+
+    <!-- Admin callout -->
+    <div class="admin-callout">
+      <div class="admin-callout-icon">!</div>
+      <div>
+        <strong>Installing requires workspace-admin permission</strong> or approval from whoever manages apps in your workspace. If that's not you, send this page to them — nothing is installed or configured until it clears Slack's own approval screen.
+      </div>
+    </div>
+
+    <!-- Footer -->
     <div class="footer">
-      <p><strong>Requested OAuth scopes</strong></p>
-      <!-- source: src/slack/receiver.ts -->
+      <div class="footer-head">
+        <div class="footer-title">Requested OAuth scopes</div>
+        <span class="kbd-brutal">10 scopes</span>
+      </div>
       <ul class="scopes-list">
-        <li>app_mentions:read</li>
-        <li>channels:history</li>
-        <li>groups:history</li>
-        <li>im:history</li>
-        <li>mpim:history</li>
-        <li>chat:write</li>
-        <li>im:write</li>
-        <li>files:read</li>
-        <li>commands</li>
-        <li>users:read</li>
+        <li class="scope-pill">app_mentions:read</li>
+        <li class="scope-pill">channels:history</li>
+        <li class="scope-pill">groups:history</li>
+        <li class="scope-pill">im:history</li>
+        <li class="scope-pill">mpim:history</li>
+        <li class="scope-pill">chat:write</li>
+        <li class="scope-pill">im:write</li>
+        <li class="scope-pill">files:read</li>
+        <li class="scope-pill">commands</li>
+        <li class="scope-pill">users:read</li>
       </ul>
     </div>
   </div>
 
   <script>
+    // Copy MCP URL
+    var btn = document.getElementById("mcp-copy");
+    var url = document.getElementById("mcp-url").textContent;
+    btn.addEventListener("click", function () {
+      navigator.clipboard.writeText(url).then(function () {
+        btn.textContent = "Copied";
+        btn.classList.add("copied");
+        setTimeout(function () {
+          btn.textContent = "Copy";
+          btn.classList.remove("copied");
+        }, 1500);
+      }).catch(function () {});
+    });
+
+    // Install error display
     if (new URLSearchParams(window.location.search).get("install_error") === "1") {
       var el = document.getElementById("install-error");
       el.hidden = false;
-      el.textContent =
-        "Installation didn't complete — you may need workspace-admin approval, or the install was cancelled.";
+      el.style.display = "grid";
     }
   </script>
 </body>

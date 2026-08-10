@@ -69,6 +69,69 @@ function useCopyButton() {
   return { copied, copy };
 }
 
+// ─── Accordion ─────────────────────────────────────────────────
+
+function AccordionItem({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="accordion-item">
+      <button
+        type="button"
+        className="accordion-trigger"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>{title}</span>
+        <span className="accordion-trigger-icon" aria-hidden="true">+</span>
+      </button>
+      <div className="accordion-content" data-open={open}>
+        <div className="accordion-content-inner">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Accordion({ children }: { children: React.ReactNode }) {
+  return <div className="accordion">{children}</div>;
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────
+
+function Skeleton({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return <span className={`skeleton ${className}`} style={style} aria-hidden="true" />;
+}
+
+// ─── Stat tile ────────────────────────────────────────────────
+
+function StatTile({
+  label,
+  value,
+  hint,
+  variant = "default",
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  variant?: "default" | "yellow" | "black";
+}) {
+  const variantClass = variant === "yellow" ? "stat-tile-yellow" : variant === "black" ? "stat-tile-black" : "";
+  return (
+    <div className={`stat-tile ${variantClass}`}>
+      <div className="stat-tile-label">{label}</div>
+      <div className="stat-tile-value">{value}</div>
+      {hint && <div className="stat-tile-hint">{hint}</div>}
+    </div>
+  );
+}
+
 // ─── Copy Agent snippet generator ────────────────────────────────
 
 function buildAgentSnippet(namespaceId: string, label: string | null): string {
@@ -133,42 +196,55 @@ function GettingStartedSteps({ origin }: { origin: string }) {
   const mcpUrl = `${origin}/mcp`;
   const { copied, copy } = useCopyButton();
   return (
-    <ol className="getting-started-steps">
-      <li>
-        Tag <code>@recall-bot</code> on any Slack thread you want to capture.
-      </li>
-      <li>
-        DM the bot <code>/recall-key</code> to get your personal delegate key.
-      </li>
-      <li>
-        Point an MCP-capable agent at <code>{mcpUrl}</code> using that key as a Bearer token.{" "}
-        <span className={`tooltip-wrap${copied ? " tooltip-yellow" : ""}`} data-tooltip={copied ? "Copied!" : "Copy MCP URL"}>
-          <button type="button" className={`btn-copy${copied ? " btn-copy--copied" : ""}`} onClick={() => copy(mcpUrl)}>
-            {copied ? "Copied" : "Copy URL"}
-          </button>
-        </span>
-      </li>
-    </ol>
+    <div className="steps-row" style={{ margin: 0 }}>
+      <div className="step-card">
+        <div className="step-card-num">1</div>
+        <h3>Tag <span className="kbd-brutal">@recall-bot</span></h3>
+        <p>Add the bot to any Slack thread you want to capture — messages and files are stored securely.</p>
+      </div>
+      <div className="step-card">
+        <div className="step-card-num">2</div>
+        <h3>DM <span className="kbd-brutal">/recall-key</span></h3>
+        <p>Get a personal delegate key to authenticate your coding agent against the recall-bot MCP.</p>
+      </div>
+      <div className="step-card">
+        <div className="step-card-num">3</div>
+        <h3>Connect via MCP</h3>
+        <p>
+          Point your agent at <code className="code-inline">{mcpUrl}</code> using the key as a Bearer token.{" "}
+        </p>
+        <div style={{ marginTop: 10 }}>
+          <span className={`tooltip-wrap${copied ? " tooltip-yellow" : ""}`} data-tooltip={copied ? "Copied!" : "Copy MCP URL"}>
+            <button type="button" className={`btn-copy${copied ? " btn-copy--copied" : ""}`} onClick={() => copy(mcpUrl)}>
+              {copied ? "Copied" : "Copy URL"}
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
 function GettingStartedPanel({ hasNamespaces }: { hasNamespaces: boolean }) {
-  const [expanded, setExpanded] = useState(false);
   const origin = window.location.origin;
   if (!hasNamespaces) {
     return (
-      <div className="getting-started-panel">
-        <h2>Get started</h2>
+      <div style={{ marginBottom: 28 }}>
+        <div className="section-heading">
+          <div className="section-heading-dot"></div>
+          <div className="section-heading-text">Get started in 3 steps</div>
+        </div>
         <GettingStartedSteps origin={origin} />
       </div>
     );
   }
   return (
-    <div className="getting-started-collapsed">
-      <button type="button" className="getting-started-link" onClick={() => setExpanded((v) => !v)}>
-        Getting started
-      </button>
-      {expanded && <GettingStartedSteps origin={origin} />}
+    <div style={{ marginBottom: 28 }}>
+      <Accordion>
+        <AccordionItem title="Getting started (3 steps)">
+          <GettingStartedSteps origin={origin} />
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
@@ -279,7 +355,13 @@ function NamespacesTable({
           {filtered.length === 0 ? (
             <tr>
               <td colSpan={6}>
-                {search ? "No namespaces match your search." : "No threads captured yet — tag @recall-bot on a thread to get started."}
+                <div className="nb-empty">
+                  <div className="nb-empty-icon">📡</div>
+                  <div className="nb-empty-title">{search ? "No namespaces match your search" : "No threads captured yet"}</div>
+                  <div className="nb-empty-desc">
+                    {search ? "Try clearing your search." : 'Tag @recall-bot on a Slack thread to capture it, or click "Add to Slack" on the landing page.'}
+                  </div>
+                </div>
               </td>
             </tr>
           ) : (
@@ -478,11 +560,12 @@ function MemoriesTable({ memories }: { memories: MemoryRow[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">💾</div>
-          {search
-            ? "No memories match your search."
-            : "No memories captured yet. Tag @recall-bot on a Slack thread to start."}
+        <div className="nb-empty">
+          <div className="nb-empty-icon">🧠</div>
+          <div className="nb-empty-title">{search ? "No memories match your search" : "No memories captured yet"}</div>
+          <div className="nb-empty-desc">
+            {search ? "Try clearing your search." : "Tag @recall-bot on a Slack thread to start capturing memories."}
+          </div>
         </div>
       ) : (
         <div>
@@ -589,7 +672,29 @@ function Dashboard() {
   useEffect(reload, []);
 
   if (unauthorized) return <NoSession />;
-  if (!workspace) return <p>Loading…</p>;
+  if (!workspace) {
+    return (
+      <>
+        <nav className="nav-bar">
+          <a href="/dashboard" className="nav-bar-brand">
+            <div className="nav-bar-brand-icon">R</div>
+            <span className="nav-bar-brand-name">Recall Bot</span>
+          </a>
+        </nav>
+        <div className="page">
+          <Skeleton className="skeleton-rounded" style="width: 280px; height: 40px; margin-bottom: 16px;" />
+          <Skeleton style="width: 50%; height: 18px; margin-bottom: 36px;" />
+          <div className="stat-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 36px;">
+            <Skeleton style="height: 100px;" />
+            <Skeleton style="height: 100px;" />
+            <Skeleton style="height: 100px;" />
+            <Skeleton style="height: 100px;" />
+          </div>
+          <Skeleton style="height: 200px;" />
+        </div>
+      </>
+    );
+  }
 
   const renameNamespace = async (id: string, label: string) => {
     await fetch(`/api/dashboard/namespaces/${id}`, {
@@ -621,12 +726,13 @@ function Dashboard() {
 
   const origin = window.location.origin;
   const totalMessages = memories.reduce((s, m) => s + m.messageCount, 0);
+  const totalFiles = memories.reduce((s, m) => s + m.fileCount, 0);
+  const totalRecalls = analytics.reduce((s, a) => s + a.recallCount, 0);
   const subtitle = [
     namespaces.length,
     `thread${namespaces.length !== 1 ? "s" : ""}`,
     users.length,
     `user${users.length !== 1 ? "s" : ""}`,
-    totalMessages > 0 ? `${totalMessages} message${totalMessages !== 1 ? "s" : ""}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -665,8 +771,22 @@ function Dashboard() {
 
       {/* Page header */}
       <div className="page">
+        <div className="breadcrumb">
+          <span className="breadcrumb-item">Recall Bot</span>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-item breadcrumb-item--current">Dashboard</span>
+        </div>
+
         <h1 className="heading-xl">{workspace.name}</h1>
         <p className="subtitle">{subtitle}</p>
+
+        {/* Stat tiles */}
+        <div className="stat-row" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 28 }}>
+          <StatTile label="Threads" value={namespaces.length} hint={`${memories.filter((m) => m.status === "active").length} active`} />
+          <StatTile label="Memories" value={totalMessages} hint={`${totalFiles} file${totalFiles !== 1 ? "s" : ""}`} variant="yellow" />
+          <StatTile label="Recalls" value={totalRecalls} hint="total MCP calls" />
+          <StatTile label="Users" value={users.length} hint="with delegate keys" />
+        </div>
 
         {/* MCP endpoint */}
         <McpEndpointBox origin={origin} />
