@@ -9,7 +9,6 @@ export interface ResolvedProfile {
 }
 
 const POSITIVE_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days — names/avatars change rarely
-const NEGATIVE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours — cheap to recheck, self-heals within a day of a reinstall
 
 // "This token fundamentally can't call this method" — workspace-wide, not per-user. missing_scope
 // is exactly what today's installed token hits until a human completes the Slack app reinstall.
@@ -22,8 +21,12 @@ const AUTH_CLASS_ERROR_CODES = new Set([
 ]);
 
 function isStale(row: { displayName: string | null; resolvedAt: Date }): boolean {
-  const ttl = row.displayName ? POSITIVE_TTL_MS : NEGATIVE_TTL_MS;
-  return Date.now() - row.resolvedAt.getTime() > ttl;
+  // A never-resolved id (missing_scope, a stale token, a since-fixed permission) is never treated
+  // as "cached" — always retried, so a scope grant self-heals on the very next lookup instead of
+  // waiting out a TTL. Only a *successful* resolution gets the long cache, since names/avatars
+  // change rarely once known.
+  if (!row.displayName) return true;
+  return Date.now() - row.resolvedAt.getTime() > POSITIVE_TTL_MS;
 }
 
 function slackErrorCode(error: unknown): string | undefined {

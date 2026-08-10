@@ -78,14 +78,14 @@ describe("resolveDisplayNames", () => {
     expect(usersInfoMock).toHaveBeenCalledTimes(2);
   });
 
-  it("retries a negative-cached row past the 24h window", async () => {
+  it("retries a negative-cached row no matter how recently it failed, so a scope fix self-heals on the very next load", async () => {
     const workspace = await seedInstalledWorkspace("T5");
     await db.insert(slackUserProfiles).values({
       workspaceId: workspace.id,
       slackUserId: "U8",
       displayName: null,
       avatarUrl: null,
-      resolvedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+      resolvedAt: new Date(), // seconds old, not stale by any TTL — still must retry
     });
     usersInfoMock.mockResolvedValue({ user: { real_name: "Now Resolved", profile: {} } });
 
