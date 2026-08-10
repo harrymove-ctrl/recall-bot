@@ -282,6 +282,10 @@ a:hover {
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+.file-badge-icon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
 .file-badge--pending,
 .file-badge--failed {
   border-style: dashed;

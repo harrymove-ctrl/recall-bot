@@ -31,6 +31,7 @@
     "express": "^5.2.1",
     "lucide-react": "^1.29.0",
     "motion": "^13.0.0",
+    "mx-icons": "^1.1.1",
     "node-emoji": "^2.2.0",
     "pg": "^8.22.0",
     "react": "^19.2.8",

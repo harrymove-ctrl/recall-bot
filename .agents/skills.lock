@@ -1,0 +1,200 @@
+schema_version = 1
+
+[upstream]
+url = "https://github.com/CommandOSSLabs/ai-devkit"
+
+[[skill]]
+name = "cmk:adr"
+dir = ".agents/skills/cmk-adr"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:15c787be961a324f88a10ff06548c55bc186292aa1e835e793b653a75ac6c4eb"
+
+[[skill]]
+name = "cmk:agent-instructions"
+dir = ".agents/skills/cmk-agent-instructions"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:cfdab019ea5a6f73eb22201c08e02c17d366e5f6b56c4db7133dcf6e82f9e7c5"
+
+[[skill]]
+name = "cmk:agent-vendors"
+dir = ".agents/skills/cmk-agent-vendors"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:4627180c56fc32f0b359156e687da3c086dda8081f1bc1fed84e3670e0b0d801"
+
+[[skill]]
+name = "cmk:cicd"
+dir = ".agents/skills/cmk-cicd"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:edea311b94e4d2ede5c7820334395ed2341645b2b8799b5ab7bb88c5567b8b1e"
+
+[[skill]]
+name = "cmk:codebase-docs"
+dir = ".agents/skills/cmk-codebase-docs"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:191f1bf9d1044b3a6ef30593d897707ae69cbb11c7c729dcb8b4aaeaa652f552"
+
+[[skill]]
+name = "cmk:delivery-handoff"
+dir = ".agents/skills/cmk-delivery-handoff"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:a1d2caa4509da00976db1537c77aa5bb112e982daeacb826620ea1d415a9a870"
+
+[[skill]]
+name = "cmk:delivery-intake"
+dir = ".agents/skills/cmk-delivery-intake"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:b53de5e5ded3a955a0972e421dbda72e00cb3cd9c0db71392777546e1c59fcb1"
+
+[[skill]]
+name = "cmk:delivery-pipeline"
+dir = ".agents/skills/cmk-delivery-pipeline"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:37089d760e0a9273db742008613ed4d11966ca6dde0e487126379c4c934fc254"
+
+[[skill]]
+name = "cmk:delivery-review"
+dir = ".agents/skills/cmk-delivery-review"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:0ab95cc9497fa47e9d0cb42dcfbb250164b01ea43e33f724720f201461931843"
+
+[[skill]]
+name = "cmk:delivery-ship"
+dir = ".agents/skills/cmk-delivery-ship"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:9b8acca6f17128f7b0419db486c5d83ed17b1d7fb80576ef6c3ad40dcf95389e"
+
+[[skill]]
+name = "cmk:delivery-spec-plan"
+dir = ".agents/skills/cmk-delivery-spec-plan"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:424d2366cf19c970ee22db0ebd7c4cb26024ccd69a38d95b444433ca985c734d"
+
+[[skill]]
+name = "cmk:delivery-workflow"
+dir = ".agents/skills/cmk-delivery-workflow"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:a8aa488457f7b3b2ba65070afa4be4113c6b1d5168ce0ea2fb34c0cf7089d15c"
+
+[[skill]]
+name = "cmk:design"
+dir = ".agents/skills/cmk-design"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:2ccad60b9b7f804927f54f64ad32d524936766565d89a8f1308bddcaafd25201"
+
+[[skill]]
+name = "cmk:discover-efforts"
+dir = ".agents/skills/cmk-discover-efforts"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:c6546e9bd4e82512cd32a9386870a58c967df1d1752a39bd89f96b2f3713c439"
+
+[[skill]]
+name = "cmk:docs"
+dir = ".agents/skills/cmk-docs"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:85499a1eee76db92f8433d1c7d90e1e553ed02056a1c0b981f8a999cb6ce99ca"
+
+[[skill]]
+name = "cmk:glossary"
+dir = ".agents/skills/cmk-glossary"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:224b73cb7581f1b28daa9b44ad5b9b4a6db336ad1ee2417502e1876a52efda33"
+
+[[skill]]
+name = "cmk:infra"
+dir = ".agents/skills/cmk-infra"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:04e37e11327d98b63cac2569689922baf4a0abcacbcc02c25e46ce56741f9a83"
+
+[[skill]]
+name = "cmk:learn"
+dir = ".agents/skills/cmk-learn"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:acdad62876cb93f07120b97b7b5863cc8b55704e9f706e5295a5d02efcb2cd2c"
+
+[[skill]]
+name = "cmk:local-stack"
+dir = ".agents/skills/cmk-local-stack"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:f6497f831d6acbbde7ca5ca1a10d9548debde52d9be9d015a36daeb2f879e510"
+
+[[skill]]
+name = "cmk:mcp-config"
+dir = ".agents/skills/cmk-mcp-config"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:014441916395b594db1a140eae596771ec424b437def9150c848b163f6fb9ff0"
+
+[[skill]]
+name = "cmk:project-layout"
+dir = ".agents/skills/cmk-project-layout"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:2faf342133ea7ff4ecef1054ccdb3191a5d0ab737deb6eed0403cb5659e6c2ce"
+
+[[skill]]
+name = "cmk:repo-setup"
+dir = ".agents/skills/cmk-repo-setup"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:e98ea0608a79dcf66137dae8ed9177640aad113f07cc83c1d936d2dfd89c1ac5"
+
+[[skill]]
+name = "cmk:requirements"
+dir = ".agents/skills/cmk-requirements"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:647c5c94c959b3f07d0cc11eefd653d233fbd86e1f700956006224b5cada7f0a"
+
+[[skill]]
+name = "cmk:rule"
+dir = ".agents/skills/cmk-rule"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:fe594705c15735be935202c0176bc98775df9959c96c66d0c4ed702f6d27ebfd"
+
+[[skill]]
+name = "cmk:sui-devstack"
+dir = ".agents/skills/cmk-sui-devstack"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:d4aaba649c66f6d07d2bf00089891dddab964b8a748d248bac28da07dee9ab49"
+
+[[skill]]
+name = "cmk:sui-sdk"
+dir = ".agents/skills/cmk-sui-sdk"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:7de37185b79a91c7e436084062d44b61855848bdf06762c9210d498ca48a1d5f"
+
+[[skill]]
+name = "cmk:sync"
+dir = ".agents/skills/cmk-sync"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:3094c10b289689854e7cdee0c83d999d346f72e8648fc7ebd5c570dc9d14adb1"
+
+[[skill]]
+name = "cmk:toolchain"
+dir = ".agents/skills/cmk-toolchain"
+upstream_ref = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+upstream_sha = "1eaf7af16ee9b63d635ed1ee94abf97ebcc42179"
+content_hash = "sha256:4a71f002155819a0a861c1f12d8922a2ca876b26039efed49ea63e9af617cf7d"

@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { parse, NodeType, type Node as MrkdwnNode } from "slack-message-parser";
 import { get as getEmoji } from "node-emoji";
+import { ImageOutline, DocumentTextOutline, DocumentCodeOutline, ArchiveOutline, DocumentOutline } from "mx-icons";
 
 interface MessageFile {
   id: string;
@@ -219,10 +220,34 @@ function fileTypeTag(mimeType: string, originalName: string): string {
   return "FILE";
 }
 
+const FILE_TYPE_ICONS: Record<string, typeof DocumentOutline> = {
+  png: ImageOutline,
+  jpeg: ImageOutline,
+  gif: ImageOutline,
+  webp: ImageOutline,
+  svg: ImageOutline,
+  html: DocumentCodeOutline,
+  json: DocumentCodeOutline,
+  zip: ArchiveOutline,
+  csv: DocumentTextOutline,
+  pdf: DocumentTextOutline,
+  plain: DocumentTextOutline,
+};
+
+function fileTypeIcon(mimeType: string, originalName: string): typeof DocumentOutline {
+  const subtype = mimeType.split("/")[1];
+  if (subtype && FILE_TYPE_ICONS[subtype]) return FILE_TYPE_ICONS[subtype];
+  const ext = originalName.split(".").pop()?.toLowerCase();
+  if (ext && FILE_TYPE_ICONS[ext]) return FILE_TYPE_ICONS[ext];
+  return DocumentOutline;
+}
+
 function FileBadge({ file, apiBase }: { file: MessageFile; apiBase: string }) {
   const modifier = file.status === "failed" ? "file-badge--failed" : file.status === "pending" ? "file-badge--pending" : "";
+  const Icon = fileTypeIcon(file.mimeType, file.originalName);
   const inner = (
     <>
+      <Icon size={14} className="file-badge-icon" aria-hidden="true" />
       <span className="file-badge-type">{fileTypeTag(file.mimeType, file.originalName)}</span>
       <span className="file-badge-name">{file.originalName}</span>
       {file.status === "failed" && " · upload failed"}
