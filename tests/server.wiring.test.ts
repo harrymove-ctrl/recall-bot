@@ -71,6 +71,39 @@ describe("buildApp (wired)", () => {
     expect(res.status).toBe(401);
   });
 
+  it("starts Slack personal sign-in with only user identity scope", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/auth/slack");
+
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.location);
+    expect(location.origin).toBe("https://slack.com");
+    expect(location.pathname).toBe("/oauth/v2/authorize");
+    expect(location.searchParams.get("redirect_uri")).toBe("https://recall-bot.test/auth/slack/callback");
+    expect(location.searchParams.get("user_scope")).toBe("users:read");
+    expect(location.searchParams.has("scope")).toBe(false);
+    expect(location.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+  });
+
+  it("rejects Slack personal sign-in callbacks with an invalid state", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/auth/slack/callback?code=test-code&state=invalid");
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe("/dashboard?slack_auth_error=invalid_state");
+  });
+
+  it("routes Slack personal sign-in callback errors back to the dashboard sign-in page", async () => {
+    const app = buildApp(db);
+    const start = await request(app).get("/auth/slack");
+    const state = new URL(start.headers.location).searchParams.get("state");
+
+    const res = await request(app).get(`/auth/slack/callback?state=${encodeURIComponent(state ?? "")}`);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe("/dashboard?slack_auth_error=no_code");
+  });
+
   it("refuses to boot when USER_SESSION_SECRET is not configured", () => {
     vi.stubEnv("USER_SESSION_SECRET", "");
     expect(() => buildApp(db)).toThrow("Missing required environment variable: USER_SESSION_SECRET");
@@ -88,6 +121,33 @@ describe("buildApp (wired)", () => {
       expect(res.status).toBe(200);
       expect(res.text).toContain("bundle.js");
     }
+  });
+
+  it("serves the dashboard shell with a 404 status for unknown dashboard routes", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/dashboard/this-page-does-not-exist");
+
+    expect(res.status).toBe(404);
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain('<div id="root"></div>');
+  });
+
+  it("serves the dashboard 404 shell for unknown browser page routes", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/1123");
+
+    expect(res.status).toBe(404);
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain('<div id="root"></div>');
+    expect(res.text).not.toContain("Cannot GET /1123");
+  });
+
+  it("does not serve the dashboard shell for unknown API routes", async () => {
+    const app = buildApp(db);
+    const res = await request(app).get("/api/does-not-exist");
+
+    expect(res.status).toBe(404);
+    expect(res.text).not.toContain('<div id="root"></div>');
   });
 
   it("exposes /api/me/me and rejects unauthenticated calls", async () => {

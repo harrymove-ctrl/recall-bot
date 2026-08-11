@@ -1083,6 +1083,52 @@ function useGridMode(): [boolean, () => void] {
   return [enabled, toggle];
 }
 
+// ─── Not found ──────────────────────────────────────────────────
+
+function NotFoundPage() {
+  return (
+    <main className="not-found-page">
+      <div className="not-found-sticker" aria-hidden="true">404</div>
+
+      <div className="not-found-browser" aria-hidden="true">
+        <div className="not-found-tab">
+          <span className="not-found-tab-close">×</span>
+          <span>Lost memory</span>
+        </div>
+        <div className="not-found-browser-body">
+          <div className="not-found-search">
+            {Array.from({ length: 10 }, (_, index) => (
+              <span key={index} style={{ "--search-index": index } as React.CSSProperties} />
+            ))}
+          </div>
+          <svg className="not-found-compass" viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r="67" className="not-found-compass-ring" />
+            <path d="M90 12v18M90 150v18M12 90h18M150 90h18" />
+            <circle cx="90" cy="90" r="45" className="not-found-compass-face" />
+            <path d="m117 62-17 38-38 17 17-38 38-17Z" className="not-found-compass-yellow" />
+            <path d="m79 79 21 21-38 17 17-38Z" className="not-found-compass-black" />
+            <circle cx="90" cy="90" r="5" className="not-found-compass-pin" />
+          </svg>
+          <span className="not-found-browser-code">ERR_404</span>
+        </div>
+      </div>
+
+      <div className="not-found-copy">
+        <p className="not-found-kicker">THREAD NOT FOUND</p>
+        <h1>THIS MEMORY<br />GOT LOST.</h1>
+        <p>The page doesn’t exist, or the thread moved somewhere we can’t recall.</p>
+      </div>
+
+      <div className="not-found-actions">
+        <a href="/dashboard" className="btn-brutal btn-brutal-yellow">
+          Back to dashboard <span aria-hidden="true">→</span>
+        </a>
+        <a href="/" className="btn-brutal btn-brutal-ghost">Go home</a>
+      </div>
+    </main>
+  );
+}
+
 // ─── App root ───────────────────────────────────────────────────
 
 export function App() {
@@ -1090,6 +1136,7 @@ export function App() {
   const path = window.location.pathname;
 
   let view: JSX.Element;
+  let isNotFound = false;
   const meNamespaceMatch = path.match(/^\/dashboard\/me\/namespaces\/([0-9a-fA-F-]+)$/);
   if (path === "/dashboard/claim") {
     view = <ClaimView />;
@@ -1101,16 +1148,25 @@ export function App() {
     view = <PersonalDashboard />;
   } else {
     const namespaceMatch = path.match(/^\/dashboard\/namespaces\/([0-9a-fA-F-]+)$/);
-    view = namespaceMatch ? <NamespaceDetail namespaceId={namespaceMatch[1]} /> : <Dashboard />;
+    if (namespaceMatch) {
+      view = <NamespaceDetail namespaceId={namespaceMatch[1]} />;
+    } else if (path === "/dashboard" || path === "/dashboard/") {
+      view = <Dashboard />;
+    } else {
+      isNotFound = true;
+      view = <NotFoundPage />;
+    }
   }
 
   return (
     <>
       <BlazeBackground />
       {gridMode && <div className="grid-overlay" />}
-      <button className="grid-toggle" onClick={toggleGridMode}>
-        Grid Mode: {gridMode ? "On" : "Off"}
-      </button>
+      {!isNotFound && (
+        <button className="grid-toggle" onClick={toggleGridMode}>
+          Grid Mode: {gridMode ? "On" : "Off"}
+        </button>
+      )}
       <div className="page">{view}</div>
     </>
   );

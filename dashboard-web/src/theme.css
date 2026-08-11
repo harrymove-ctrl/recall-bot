@@ -2158,3 +2158,213 @@ a:hover {
     font-size: 0.78rem;
   }
 }
+
+/* ── 404 page ── */
+
+.not-found-page {
+  position: relative;
+  display: flex;
+  min-height: calc(100svh - 80px);
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 64px 24px 48px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.not-found-sticker {
+  position: absolute;
+  top: 54px;
+  right: 34px;
+  z-index: 3;
+  padding: 8px 13px;
+  transform: rotate(8deg);
+  border: 2px solid #000;
+  background: var(--color-yellow);
+  box-shadow: 3px 3px 0 #000;
+  font-family: var(--font-head);
+  font-size: 1.05rem;
+}
+
+.not-found-browser {
+  width: min(100%, 420px);
+  margin-bottom: 42px;
+  transform: rotate(2deg) skewX(1deg);
+  filter: drop-shadow(-9px 11px 0 #000);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.not-found-browser:hover {
+  transform: rotate(0deg) skewX(0deg) translateY(-4px);
+  filter: drop-shadow(-5px 7px 0 #000);
+}
+
+.not-found-tab {
+  display: flex;
+  width: max-content;
+  min-width: 145px;
+  margin-left: 20px;
+  padding: 9px 14px 8px;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid #000;
+  border-bottom: 0;
+  background: #fff;
+  font-family: var(--font-head);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.not-found-tab-close {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid #000;
+  background: var(--color-yellow);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.not-found-browser-body {
+  position: relative;
+  display: flex;
+  min-height: 246px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid #000;
+  background: #fff;
+}
+
+.not-found-search {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
+  padding: 7px 9px;
+  border: 2px solid #000;
+  background: var(--color-yellow);
+}
+
+.not-found-search span {
+  aspect-ratio: 1;
+  max-width: 13px;
+  border: 1.5px solid #000;
+  background: #fff;
+  animation: not-found-search-pulse 3.6s calc(var(--search-index) * -160ms) steps(1) infinite;
+}
+
+.not-found-compass {
+  width: 145px;
+  margin-top: 30px;
+  fill: none;
+  stroke: #000;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 3;
+  transition: transform 300ms ease;
+}
+
+.not-found-browser:hover .not-found-compass {
+  transform: rotate(-25deg);
+}
+
+.not-found-compass-ring { stroke-dasharray: 2 8; }
+.not-found-compass-face { fill: #fffbf0; }
+.not-found-compass-yellow { fill: var(--color-yellow); }
+.not-found-compass-black,
+.not-found-compass-pin { fill: #000; }
+
+.not-found-browser-code {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.not-found-copy { max-width: 570px; }
+
+.not-found-kicker {
+  display: inline-block;
+  margin: 0 0 14px;
+  padding: 5px 10px;
+  border: 2px solid #000;
+  background: var(--color-yellow);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.not-found-copy h1 {
+  margin: 0;
+  color: #000;
+  font-family: var(--font-head);
+  font-size: clamp(2.7rem, 9vw, 5rem);
+  letter-spacing: -0.055em;
+  line-height: 0.86;
+}
+
+.not-found-copy > p:last-child {
+  max-width: 470px;
+  margin: 20px auto 0;
+  color: #6b6355;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.not-found-actions .btn-brutal { min-height: 44px; }
+
+@keyframes not-found-search-pulse {
+  0%, 70%, 100% { background: #fff; }
+  10%, 24% { background: #000; }
+}
+
+@media (max-width: 640px) {
+  .not-found-page {
+    min-height: calc(100svh - 56px);
+    padding: 54px 0 36px;
+  }
+
+  .not-found-sticker {
+    top: 34px;
+    right: -2px;
+  }
+
+  .not-found-browser {
+    width: calc(100% - 14px);
+    margin-bottom: 38px;
+  }
+
+  .not-found-browser-body { min-height: 220px; }
+  .not-found-copy h1 { font-size: clamp(2.6rem, 14vw, 4rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .not-found-browser,
+  .not-found-compass,
+  .not-found-search span {
+    animation: none;
+    transition: none;
+  }
+}

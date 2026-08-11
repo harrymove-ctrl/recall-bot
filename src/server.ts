@@ -1,4 +1,5 @@
 import "dotenv/config";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
@@ -37,6 +38,33 @@ function requireEnv(name: string): string {
  * capture time — the worst possible place to discover the misconfiguration.
  */
 const REQUIRED_BUCKET_ENV_VARS = ["BUCKET", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "ENDPOINT"] as const;
+const SLACK_AUTH_STATE_MAX_AGE_MS = 1000 * 60 * 10;
+
+function signSlackAuthState(secret: string, now = Date.now()): string {
+  const payload = Buffer.from(JSON.stringify({ ts: now }), "utf8").toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function verifySlackAuthState(state: string | undefined, secret: string, now = Date.now()): boolean {
+  if (!state) return false;
+  const [payload, signature, extra] = state.split(".");
+  if (!payload || !signature || extra !== undefined) return false;
+
+  const expected = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  const signatureBytes = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expected);
+  if (signatureBytes.length !== expectedBytes.length || !crypto.timingSafeEqual(signatureBytes, expectedBytes)) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { ts?: unknown };
+    return typeof parsed.ts === "number" && now - parsed.ts >= 0 && now - parsed.ts <= SLACK_AUTH_STATE_MAX_AGE_MS;
+  } catch {
+    return false;
+  }
+}
 
 export function buildApp(database: Database): Express {
   for (const name of REQUIRED_BUCKET_ENV_VARS) requireEnv(name);
@@ -54,27 +82,15 @@ export function buildApp(database: Database): Express {
   app.get("/auth/slack", (req, res) => {
     const clientId = requireEnv("SLACK_CLIENT_ID");
     const publicBaseUrl = requireEnv("PUBLIC_BASE_URL");
-    const state = Buffer.from(JSON.stringify({ ts: Date.now() }), "utf8").toString("base64url");
+    const state = signSlackAuthState(requireEnv("SLACK_STATE_SECRET"));
     const redirectUri = `${publicBaseUrl}/auth/slack/callback`;
-    const scopes = [
-      "app_mentions:read",
-      "channels:history",
-      "groups:history",
-      "im:history",
-      "mpim:history",
-      "chat:write",
-      "im:write",
-      "files:read",
-      "commands",
-      "users:read",
-    ].join(",");
     const url = new URL("https://slack.com/oauth/v2/authorize");
     url.searchParams.set("client_id", clientId);
-    url.searchParams.set("scope", scopes);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
-    // user_scope for personal token (needed for identity)
-    url.searchParams.set("user_scope", "app_mentions:read,channels:history,groups:history,im:history,mpim:history,chat:write,im:write,files:read,users:read");
+    // Personal sign-in only needs a user identity. Bot permissions are requested by the install
+    // flow under /slack/install; asking for them here makes sign-in look like an app reinstall.
+    url.searchParams.set("user_scope", "users:read");
     res.redirect(302, url.toString());
   });
 
@@ -83,13 +99,18 @@ export function buildApp(database: Database): Express {
     const publicBaseUrl = requireEnv("PUBLIC_BASE_URL");
     const clientId = requireEnv("SLACK_CLIENT_ID");
     const clientSecret = requireEnv("SLACK_CLIENT_SECRET");
+    const stateSecret = requireEnv("SLACK_STATE_SECRET");
 
     if (error) {
-      res.redirect(`/?slack_auth_error=${encodeURIComponent(error)}`);
+      res.redirect(`/dashboard?slack_auth_error=${encodeURIComponent(error)}`);
+      return;
+    }
+    if (!verifySlackAuthState(state, stateSecret)) {
+      res.redirect("/dashboard?slack_auth_error=invalid_state");
       return;
     }
     if (!code) {
-      res.redirect("/?slack_auth_error=no_code");
+      res.redirect("/dashboard?slack_auth_error=no_code");
       return;
     }
 
@@ -116,7 +137,7 @@ export function buildApp(database: Database): Express {
         .where(eq(workspaces.slackTeamId, teamId));
 
       if (!workspace) {
-        res.redirect("/?slack_auth_error=workspace_not_found");
+        res.redirect("/dashboard?slack_auth_error=workspace_not_found");
         return;
       }
 
@@ -139,7 +160,7 @@ export function buildApp(database: Database): Express {
       res.redirect("/dashboard/me");
     } catch (err) {
       console.error("Slack OAuth callback error:", err);
-      res.redirect("/?slack_auth_error=callback_failed");
+      res.redirect("/dashboard?slack_auth_error=callback_failed");
     }
   });
 
@@ -209,10 +230,21 @@ export function buildApp(database: Database): Express {
     res.sendFile("index.html", { root: DASHBOARD_DIST });
   });
   app.use("/dashboard", express.static(DASHBOARD_DIST));
+  // Unknown dashboard URLs still need the SPA shell so React can render the branded 404.
+  app.get(/^\/dashboard(?:\/.*)?$/, (_req, res) => {
+    res.status(404).sendFile("index.html", { root: DASHBOARD_DIST });
+  });
   app.use("/api/dashboard", createDashboardApiRouter(database, dashboardSessionSecret));
   app.use("/api/me", createMeApiRouter(database, userSessionSecret));
 
   mountMcpServer(app, database);
+
+  // Unknown browser page routes should still receive the dashboard SPA shell so users see the
+  // branded 404 instead of Express' plain "Cannot GET ..." fallback. API/MCP paths stay JSON/auth
+  // surfaces and should not be disguised as HTML pages.
+  app.get(/^\/(?!api(?:\/|$)|mcp(?:\/|$)).*/, (_req, res) => {
+    res.status(404).sendFile("index.html", { root: DASHBOARD_DIST });
+  });
 
   return app;
 }
