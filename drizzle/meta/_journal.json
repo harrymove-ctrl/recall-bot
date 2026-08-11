@@ -43,6 +43,13 @@
       "when": 1786097716644,
       "tag": "0005_user_claim_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786433472036,
+      "tag": "0006_tranquil_iron_monger",
+      "breakpoints": true
     }
   ]
 }

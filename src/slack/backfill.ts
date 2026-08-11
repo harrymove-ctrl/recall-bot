@@ -4,6 +4,7 @@ import type { Database } from "../db/client.js";
 import { namespaces, messages, files } from "../db/schema.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
 import { recordLinearIssueLinks } from "./linearLinks.js";
+import { persistMessageToWalrus } from "../storage/walrusMemory.js";
 
 export interface BackfillThreadParams {
   db: Database;
@@ -129,6 +130,21 @@ export async function backfillThread(params: BackfillThreadParams): Promise<{ na
       // a thread doubles as retroactive link detection for namespaces captured before this
       // feature existed. onConflictDoNothing on the join table makes this cheap and idempotent.
       await recordLinearIssueLinks({ db, namespaceId: namespace.id, text: raw.text ?? "" });
+
+      if (messageRow) {
+        await persistMessageToWalrus({
+          db,
+          messageId: messageRow.id,
+          workspaceId,
+          namespaceId: namespace.id,
+          channelId,
+          threadTs,
+          slackUserId: raw.user,
+          slackTs: raw.ts,
+          text: raw.text ?? "",
+          createdAt: messageRow.createdAt,
+        });
+      }
 
       // onConflictDoNothing returns [] on a skipped row
       const rawFiles = (raw as { files?: SlackFileObject[] }).files ?? [];

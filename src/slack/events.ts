@@ -7,6 +7,7 @@ import { resolveWorkspaceByTeamId } from "../db/workspaces.js";
 import { backfillThread } from "./backfill.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
 import { recordLinearIssueLinks } from "./linearLinks.js";
+import { persistMessageToWalrus } from "../storage/walrusMemory.js";
 
 interface AppMentionLikeEvent {
   channel: string;
@@ -109,6 +110,19 @@ export async function handleMessage(params: {
   }
 
   if (messageRow) {
+    await persistMessageToWalrus({
+      db,
+      messageId: messageRow.id,
+      workspaceId,
+      namespaceId: namespace.id,
+      channelId: message.channel,
+      threadTs: message.thread_ts,
+      slackUserId: message.user,
+      slackTs: message.ts,
+      text: message.text ?? "",
+      createdAt: messageRow.createdAt,
+    });
+
     await recordLinearIssueLinks({ db, namespaceId: namespace.id, text: message.text ?? "" });
   }
 }

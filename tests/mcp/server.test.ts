@@ -64,8 +64,79 @@ describe("mountMcpServer", () => {
 
       expect(parsed.namespaceId).toBe(namespace.id);
       expect(parsed.messages).toEqual([
-        { slackUserId: "U1", text: "hello", slackTs: "1.0", files: [] },
+        { slackUserId: "U1", text: "hello", slackTs: "1.0", walrusBlobId: null, walrusStorageStatus: "pending", files: [] },
       ]);
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it("lists only namespaces the delegate user participated in", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T-LIST", name: "T" }).returning();
+    const [mine] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.0", label: "Mine" })
+      .returning();
+    const [theirs] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C2", threadTs: "2.0", label: "Theirs" })
+      .returning();
+    await db.insert(messages).values([
+      { namespaceId: mine.id, slackUserId: "U1", text: "mine", slackTs: "1.0" },
+      { namespaceId: theirs.id, slackUserId: "U2", text: "theirs", slackTs: "2.0" },
+    ]);
+
+    const { plaintext, hash } = generateDelegateKey();
+    await db.insert(users).values({ workspaceId: workspace.id, slackUserId: "U1", delegateKeyHash: hash });
+
+    const { httpServer, url } = await startTestServer();
+    try {
+      const transport = new StreamableHTTPClientTransport(new URL(url), {
+        requestInit: { headers: { Authorization: `Bearer ${plaintext}` } },
+      });
+      const client = new Client({ name: "test-client", version: "1.0.0" });
+      await client.connect(transport);
+
+      const result = await client.callTool({ name: "list_namespaces", arguments: {} });
+      const text = (result.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+      const parsed = JSON.parse(text);
+
+      expect(parsed.namespaces.map((n: { id: string }) => n.id)).toEqual([mine.id]);
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it("generates a plan and checklist from a recalled namespace", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T-PLAN", name: "T" }).returning();
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.0" })
+      .returning();
+    await db
+      .insert(messages)
+      .values({ namespaceId: namespace.id, slackUserId: "U1", text: "ship walrus-backed recall", slackTs: "1.0", walrusBlobId: "blob-1", walrusStorageStatus: "stored" });
+
+    const { plaintext, hash } = generateDelegateKey();
+    await db.insert(users).values({ workspaceId: workspace.id, slackUserId: "U1", delegateKeyHash: hash });
+
+    const { httpServer, url } = await startTestServer();
+    try {
+      const transport = new StreamableHTTPClientTransport(new URL(url), {
+        requestInit: { headers: { Authorization: `Bearer ${plaintext}` } },
+      });
+      const client = new Client({ name: "test-client", version: "1.0.0" });
+      await client.connect(transport);
+
+      const plan = await client.callTool({ name: "memory_plan", arguments: { namespaceId: namespace.id } });
+      const checklist = await client.callTool({ name: "memory_checklist", arguments: { namespaceId: namespace.id } });
+      const planText = (plan.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+      const checklistText = (checklist.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+
+      expect(planText).toContain("# Memory Plan");
+      expect(planText).toContain("ship walrus-backed recall");
+      expect(checklistText).toContain("# Memory Checklist");
+      expect(checklistText).toContain("Confirm 1 message have Walrus blob IDs");
     } finally {
       httpServer.close();
     }

@@ -143,6 +143,9 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
           avatarUrl: profile?.avatarUrl ?? null,
           text: m.text,
           slackTs: m.slackTs,
+          walrusBlobId: m.walrusBlobId,
+          walrusStorageStatus: m.walrusStorageStatus,
+          walrusStoredAt: m.walrusStoredAt,
           createdAt: m.createdAt,
           files: (filesByMessageId.get(m.id) ?? []).map((f) => ({
             id: f.id,

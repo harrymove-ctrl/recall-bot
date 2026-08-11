@@ -6,10 +6,34 @@ import { z } from "zod";
 import type { Database } from "../db/client.js";
 import { requireDelegateKey, type AuthedRequest, type DelegateUser } from "./auth.js";
 import { logRecallEvent } from "./recallEvents.js";
-import { recallNamespace } from "./recallTool.js";
+import { buildMemoryChecklist, buildMemoryPlan, listDelegateNamespaces, recallNamespace } from "./recallTool.js";
 
 function buildRecallServer(db: Database, delegateUser: DelegateUser | undefined): McpServer {
   const server = new McpServer({ name: "recall-mcp-server", version: "1.0.0" });
+
+  server.registerTool(
+    "list_namespaces",
+    {
+      title: "List my namespaces",
+      description: "Lists namespaces the authenticated Slack user participated in and may recall",
+      inputSchema: {},
+    },
+    async (): Promise<CallToolResult> => {
+      if (!delegateUser) {
+        return { content: [{ type: "text", text: "Unauthorized" }], isError: true };
+      }
+
+      const rows = await listDelegateNamespaces(db, delegateUser);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ namespaces: rows }),
+          },
+        ],
+      };
+    },
+  );
 
   server.registerTool(
     "recall",
@@ -45,6 +69,52 @@ function buildRecallServer(db: Database, delegateUser: DelegateUser | undefined)
           },
         ],
       };
+    },
+  );
+
+  server.registerTool(
+    "memory_plan",
+    {
+      title: "Generate plan from memory",
+      description: "Recalls a namespace and formats the captured memory into an implementation plan",
+      inputSchema: {
+        namespaceId: z.string().uuid().describe("Namespace ID returned when the bot captured the thread"),
+      },
+    },
+    async ({ namespaceId }): Promise<CallToolResult> => {
+      if (!delegateUser) {
+        return { content: [{ type: "text", text: "Unauthorized" }], isError: true };
+      }
+
+      const result = await recallNamespace(db, delegateUser, namespaceId);
+      if (!result.authorized) {
+        return { content: [{ type: "text", text: "Not authorized to recall this namespace" }], isError: true };
+      }
+
+      return { content: [{ type: "text", text: buildMemoryPlan(result.messages) }] };
+    },
+  );
+
+  server.registerTool(
+    "memory_checklist",
+    {
+      title: "Generate checklist from memory",
+      description: "Recalls a namespace and formats the captured memory into a verification checklist",
+      inputSchema: {
+        namespaceId: z.string().uuid().describe("Namespace ID returned when the bot captured the thread"),
+      },
+    },
+    async ({ namespaceId }): Promise<CallToolResult> => {
+      if (!delegateUser) {
+        return { content: [{ type: "text", text: "Unauthorized" }], isError: true };
+      }
+
+      const result = await recallNamespace(db, delegateUser, namespaceId);
+      if (!result.authorized) {
+        return { content: [{ type: "text", text: "Not authorized to recall this namespace" }], isError: true };
+      }
+
+      return { content: [{ type: "text", text: buildMemoryChecklist(result.messages) }] };
     },
   );
 

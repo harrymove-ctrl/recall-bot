@@ -116,6 +116,9 @@ export const messages = pgTable(
     slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
     text: text("text").notNull(),
     slackTs: varchar("slack_ts", { length: 32 }).notNull(),
+    walrusBlobId: text("walrus_blob_id"),
+    walrusStorageStatus: varchar("walrus_storage_status", { length: 16 }).notNull().default("pending"),
+    walrusStoredAt: timestamp("walrus_stored_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

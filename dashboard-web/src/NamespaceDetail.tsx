@@ -17,6 +17,9 @@ interface MessageRow {
   avatarUrl: string | null;
   text: string;
   slackTs: string;
+  walrusBlobId: string | null;
+  walrusStorageStatus: string;
+  walrusStoredAt: string | null;
   createdAt: string;
   files: MessageFile[];
 }
@@ -345,6 +348,14 @@ export function NamespaceDetail({
                       </div>
                     )}
                     {m.text && <p className="message-row-text">{renderMrkdwn(m.text, linearIssues, mentionNames)}</p>}
+                    <div className={`walrus-proof walrus-proof--${m.walrusStorageStatus}`}>
+                      <span className="walrus-proof-status">Walrus: {m.walrusStorageStatus}</span>
+                      {m.walrusBlobId ? (
+                        <code className="walrus-proof-blob">{m.walrusBlobId}</code>
+                      ) : (
+                        <span className="walrus-proof-empty">No blob ID yet</span>
+                      )}
+                    </div>
                     {m.files.length > 0 && (
                       <div className="message-files">
                         {m.files.map((f) => (

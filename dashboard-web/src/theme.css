@@ -241,6 +241,50 @@ a:hover {
   overflow-wrap: anywhere;
 }
 
+.walrus-proof {
+  align-items: center;
+  background: #fff7d1;
+  border: 2px solid var(--color-black);
+  box-shadow: 2px 2px 0 var(--color-black);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  max-width: 100%;
+  padding: 5px 8px;
+}
+
+.walrus-proof-status {
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.walrus-proof-blob {
+  background: var(--color-black);
+  color: var(--color-yellow);
+  font-size: 0.72rem;
+  max-width: min(52vw, 520px);
+  overflow: hidden;
+  padding: 2px 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.walrus-proof-empty {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.walrus-proof--stored {
+  background: #dcfce7;
+}
+
+.walrus-proof--failed {
+  background: #fee2e2;
+}
+
 .avatar-initials {
   display: inline-flex;
   align-items: center;
