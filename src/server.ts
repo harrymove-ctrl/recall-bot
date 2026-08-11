@@ -85,7 +85,7 @@ export function buildApp(database: Database): Express {
     const state = signSlackAuthState(requireEnv("SLACK_STATE_SECRET"));
     const redirectUri = `${publicBaseUrl}/auth/slack/callback`;
     const url = new URL("https://slack.com/oauth/v2/authorize");
-    url.searchParams.set("client_id", clientId);
+    // Bot scopes — include commands and app_mentions:read (bot-only)
     url.searchParams.set("scope", [
       "app_mentions:read",
       "channels:history",
@@ -98,8 +98,8 @@ export function buildApp(database: Database): Express {
       "commands",
       "users:read",
     ].join(","));
+    // User scopes — exclude bot-only scopes (commands, app_mentions:read)
     url.searchParams.set("user_scope", [
-      "app_mentions:read",
       "channels:history",
       "groups:history",
       "im:history",
