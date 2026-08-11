@@ -106,7 +106,7 @@ function Accordion({ children }: { children: React.ReactNode }) {
 // ─── Skeleton ─────────────────────────────────────────────────
 
 function Skeleton({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
-  return <span className={`skeleton ${className}`} style={style} aria-hidden="true" />;
+  return <div className={`skeleton ${className}`} style={style} aria-hidden="true" />;
 }
 
 // ─── Stat tile ────────────────────────────────────────────────
@@ -909,15 +909,15 @@ function Dashboard() {
           </a>
         </nav>
         <div className="page">
-          <Skeleton className="skeleton-rounded" style="width: 280px; height: 40px; margin-bottom: 16px;" />
-          <Skeleton style="width: 50%; height: 18px; margin-bottom: 36px;" />
-          <div className="stat-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 36px;">
-            <Skeleton style="height: 100px;" />
-            <Skeleton style="height: 100px;" />
-            <Skeleton style="height: 100px;" />
-            <Skeleton style="height: 100px;" />
+          <Skeleton className="skeleton-rounded" style={{ width: 280, height: 40, marginBottom: 16 }} />
+          <Skeleton style={{ width: "50%", height: 18, marginBottom: 36 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 36 }}>
+            <Skeleton style={{ height: 100 }} />
+            <Skeleton style={{ height: 100 }} />
+            <Skeleton style={{ height: 100 }} />
+            <Skeleton style={{ height: 100 }} />
           </div>
-          <Skeleton style="height: 200px;" />
+          <Skeleton style={{ height: 200 }} />
         </div>
       </>
     );
