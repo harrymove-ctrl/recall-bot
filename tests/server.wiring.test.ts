@@ -78,10 +78,11 @@ describe("buildApp (wired)", () => {
     expect(res.status).toBe(302);
     const location = new URL(res.headers.location);
     expect(location.origin).toBe("https://slack.com");
-    expect(location.pathname).toBe("/oauth/v2/authorize");
+    expect(location.pathname).toBe("/openid/connect/authorize");
+    expect(location.searchParams.get("response_type")).toBe("code");
     expect(location.searchParams.get("redirect_uri")).toBe("https://recall-bot.test/auth/slack/callback");
-    expect(location.searchParams.get("user_scope")).toBe("users:read");
-    expect(location.searchParams.has("scope")).toBe(false);
+    expect(location.searchParams.get("scope")).toBe("openid profile");
+    expect(location.searchParams.has("user_scope")).toBe(false);
     expect(location.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
   });
 

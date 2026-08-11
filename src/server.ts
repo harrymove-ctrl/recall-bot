@@ -84,13 +84,12 @@ export function buildApp(database: Database): Express {
     const publicBaseUrl = requireEnv("PUBLIC_BASE_URL");
     const state = signSlackAuthState(requireEnv("SLACK_STATE_SECRET"));
     const redirectUri = `${publicBaseUrl}/auth/slack/callback`;
-    const url = new URL("https://slack.com/oauth/v2/authorize");
+    const url = new URL("https://slack.com/openid/connect/authorize");
+    url.searchParams.set("response_type", "code");
     url.searchParams.set("client_id", clientId);
+    url.searchParams.set("scope", "openid profile");
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
-    // Personal sign-in only needs a user identity. Bot permissions are requested by the install
-    // flow under /slack/install; asking for them here makes sign-in look like an app reinstall.
-    url.searchParams.set("user_scope", "users:read");
     res.redirect(302, url.toString());
   });
 
@@ -116,18 +115,23 @@ export function buildApp(database: Database): Express {
 
     try {
       const client = new WebClient(clientSecret ? undefined : undefined);
-      const result = await client.oauth.v2.access({
+      const result = await client.openid.connect.token({
         client_id: clientId,
         client_secret: clientSecret,
         redirect_uri: `${publicBaseUrl}/auth/slack/callback`,
         code,
       });
 
-      const teamId = result.team?.id;
-      const userId = result.authed_user?.id;
+      if (!result.access_token) {
+        throw new Error("Missing access token from Slack OpenID response");
+      }
+
+      const userInfo = await new WebClient(result.access_token).openid.connect.userInfo();
+      const teamId = userInfo["https://slack.com/team_id"];
+      const userId = userInfo["https://slack.com/user_id"];
 
       if (!teamId || !userId) {
-        throw new Error("Missing team or user id from OAuth response");
+        throw new Error("Missing team or user id from Slack OpenID userInfo response");
       }
 
       // Find workspace by teamId
