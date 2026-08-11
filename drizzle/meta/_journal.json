@@ -50,6 +50,13 @@
       "when": 1786433472036,
       "tag": "0006_tranquil_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786435074168,
+      "tag": "0007_low_prima",
+      "breakpoints": true
     }
   ]
 }

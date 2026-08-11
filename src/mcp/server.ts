@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { Database } from "../db/client.js";
 import { requireDelegateKey, type AuthedRequest, type DelegateUser } from "./auth.js";
 import { logRecallEvent } from "./recallEvents.js";
-import { buildMemoryChecklist, buildMemoryPlan, listDelegateNamespaces, recallNamespace } from "./recallTool.js";
+import { buildMemoryChecklist, buildMemoryPlan, listDelegateNamespaces, recallNamespace, verifyWalrusMessageBlob } from "./recallTool.js";
 
 function buildRecallServer(db: Database, delegateUser: DelegateUser | undefined): McpServer {
   const server = new McpServer({ name: "recall-mcp-server", version: "1.0.0" });
@@ -115,6 +115,30 @@ function buildRecallServer(db: Database, delegateUser: DelegateUser | undefined)
       }
 
       return { content: [{ type: "text", text: buildMemoryChecklist(result.messages) }] };
+    },
+  );
+
+  server.registerTool(
+    "verify_blob",
+    {
+      title: "Verify Walrus message blob",
+      description: "Reads a message's Walrus blob through the configured aggregator and reports whether it is available",
+      inputSchema: {
+        namespaceId: z.string().uuid().describe("Namespace ID returned when the bot captured the thread"),
+        messageId: z.string().uuid().describe("Message ID from the recall response"),
+      },
+    },
+    async ({ namespaceId, messageId }): Promise<CallToolResult> => {
+      if (!delegateUser) {
+        return { content: [{ type: "text", text: "Unauthorized" }], isError: true };
+      }
+
+      const result = await verifyWalrusMessageBlob(db, delegateUser, namespaceId, messageId);
+      if (!result.authorized) {
+        return { content: [{ type: "text", text: "Not authorized to verify this blob" }], isError: true };
+      }
+
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     },
   );
 

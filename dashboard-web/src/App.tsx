@@ -54,6 +54,7 @@ interface MemoryRow {
   createdAt: string;
   messageCount: number;
   fileCount: number;
+  walrusStoredMessageCount: number;
 }
 
 // ─── Utility: copy to clipboard ─────────────────────────────────
@@ -813,6 +814,7 @@ function MemoriesTable({ memories }: { memories: MemoryRow[] }) {
                 <div className="row-card-title">{m.label ?? m.id}</div>
                 <div className="row-card-sub">
                   #{m.channelId} · {m.messageCount} message{m.messageCount !== 1 ? "s" : ""}
+                  {` · ${m.walrusStoredMessageCount}/${m.messageCount} Walrus-backed`}
                   {m.fileCount > 0 && ` · ${m.fileCount} file${m.fileCount !== 1 ? "s" : ""}`}
                   {m.status === "archived" && " · archived"}
                   {" · "}

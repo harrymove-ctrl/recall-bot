@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import express from "express";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -15,6 +15,11 @@ import { logRecallEvent } from "../../src/mcp/recallEvents.js";
 vi.mock("../../src/mcp/recallEvents.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/mcp/recallEvents.js")>();
   return { ...actual, logRecallEvent: vi.fn(actual.logRecallEvent) };
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 async function startTestServer() {
@@ -64,7 +69,16 @@ describe("mountMcpServer", () => {
 
       expect(parsed.namespaceId).toBe(namespace.id);
       expect(parsed.messages).toEqual([
-        { slackUserId: "U1", text: "hello", slackTs: "1.0", walrusBlobId: null, walrusStorageStatus: "pending", files: [] },
+        expect.objectContaining({
+          slackUserId: "U1",
+          text: "hello",
+          slackTs: "1.0",
+          walrusBlobId: null,
+          walrusStorageStatus: "pending",
+          contentSource: "postgres_cache",
+          walrusVerified: false,
+          files: [],
+        }),
       ]);
     } finally {
       httpServer.close();
@@ -137,6 +151,60 @@ describe("mountMcpServer", () => {
       expect(planText).toContain("ship walrus-backed recall");
       expect(checklistText).toContain("# Memory Checklist");
       expect(checklistText).toContain("Confirm 1 message have Walrus blob IDs");
+    } finally {
+      httpServer.close();
+    }
+  });
+
+  it("verifies a Walrus blob for an authorized recalled message", async () => {
+    const [workspace] = await db.insert(workspaces).values({ slackTeamId: "T-VERIFY", name: "T" }).returning();
+    const [namespace] = await db
+      .insert(namespaces)
+      .values({ workspaceId: workspace.id, channelId: "C1", threadTs: "1.0" })
+      .returning();
+    const [message] = await db
+      .insert(messages)
+      .values({ namespaceId: namespace.id, slackUserId: "U1", text: "cached", slackTs: "1.0", walrusBlobId: "blob-verify", walrusStorageStatus: "stored" })
+      .returning();
+
+    vi.stubEnv("WALRUS_AGGREGATOR_URL", "https://aggregator.example");
+    const realFetch = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.startsWith("https://aggregator.example/")) {
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: async () => new TextEncoder().encode("verified").buffer,
+          } as Response);
+        }
+        return realFetch(input, init);
+      }),
+    );
+
+    const { plaintext, hash } = generateDelegateKey();
+    await db.insert(users).values({ workspaceId: workspace.id, slackUserId: "U1", delegateKeyHash: hash });
+
+    const { httpServer, url } = await startTestServer();
+    try {
+      const transport = new StreamableHTTPClientTransport(new URL(url), {
+        requestInit: { headers: { Authorization: `Bearer ${plaintext}` } },
+      });
+      const client = new Client({ name: "test-client", version: "1.0.0" });
+      await client.connect(transport);
+
+      const result = await client.callTool({ name: "verify_blob", arguments: { namespaceId: namespace.id, messageId: message.id } });
+      const text = (result.content as Array<{ type: string; text?: string }>)[0]?.text ?? "";
+      const parsed = JSON.parse(text);
+
+      expect(parsed).toEqual({
+        authorized: true,
+        messageId: message.id,
+        walrusBlobId: "blob-verify",
+        verified: true,
+        contentLength: 8,
+      });
     } finally {
       httpServer.close();
     }

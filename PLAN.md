@@ -1,187 +1,88 @@
-# Recall-Bot Dashboard Redesign — Plan
+# recall-bot Dashboard — Neobrutalist Redesign
 
 ## Context
+Redesign the recall-bot dashboard with a neobrutalist aesthetic (Archivo Black, Space Grotesk, yellow/black, chunky borders). Applied across: landing page, dashboard, onboarding, and sign-in.
 
-The recall-bot admin dashboard at `https://recall-bot-production-105d.up.railway.app/` serves two audiences:
-- **Workspace admins** — manage all users, all namespaces, see analytics
-- **Personal users** — manage their own captured threads
+## What was done
 
-Current issues:
-1. Headings use `Georgia` serif font — feels dated, weak hierarchy
-2. No context headers for each tab/section
-3. Users can't see MCP tool endpoint or how to integrate agents
-4. No blobId visibility for stored files
-5. No per-namespace actions (copy agent snippet, link MD, search)
+### 1. Design System (`dashboard-web/src/theme.css`)
+Pure CSS neobrutalist components — no shadcn, no extra deps:
+- `.heading-xl/lg/md/sm` — Archivo Black headings
+- `.nav-bar` — sticky yellow nav with black border
+- `.btn-brutal` + variants (`-sm`, `-ghost`, `-yellow`) — chunky press-down buttons
+- `.mcp-box` — black background, yellow MCP URL display
+- `.search-brutal` — warm-cream input with search icon
+- `.badge`, `.badge-yellow`, `.badge-black`, `.badge-muted`
+- `.table-brutal` — thick borders, yellow active rows
+- `.row-card` — hover-lift card for Memories tab
+- `.tooltip-wrap[data-tooltip]` — CSS-only tooltips with arrow, fade-in
+- `.skeleton` + `.skeleton-rounded` — pulsing loading placeholders
+- `.accordion`, `.accordion-trigger`, `.accordion-content` — disclosure widget
+- `.stat-tile` (+ variants) — metric display tiles
+- `.onboarding-card`, `.checklist`, `.checklist-item` — onboarding UI
+- `.step-card`, `.step-card-num` — 3-step how-it-works cards
+- `.sign-in-card` — OAuth sign-in CTA with Slack logo
+- `.alert` (info/success/warn/error variants) — inline callouts
+- `.nb-empty` — empty state with icon, title, description
+- `.kbd-brutal` — keyboard/command style badge
+- `.breadcrumb` — page hierarchy navigation
 
-**Goal:** Matching neobrutalist design (Archivo Black + Space Grotesk, yellow/black, chunky borders) while reusing existing `MorphingTabs`, API, and theme infrastructure.
+### 2. Fonts (`dashboard-web/src/index.html`)
+Added to Google Fonts link: Archivo Black + Space Grotesk.
 
----
+### 3. Landing page (`public/index.html`)
+Complete rewrite with neobrutalist design:
+- Sticky yellow nav bar with Recall Bot branding + Dashboard/Add-to-Slack CTAs
+- Hero with 4.5rem Archivo Black display heading
+- MCP endpoint bar (black bg, yellow text, copy button)
+- 4 stat tiles (Recall / Capture / Agents / Storage)
+- 3-step card flow with chunky borders
+- Admin callout card
+- Footer with scope pills
 
-## Design Reference
+### 4. Dashboard (`dashboard-web/src/App.tsx`)
+- `Dashboard` component: breadcrumb, stat tiles row, MCP box, accordion/getting-started
+- `NamespacesTable`: search bar, per-row Copy Agent / Link MD / Archive buttons, tooltip wrappers
+- `MemoriesTable`: card list view, empty state, per-card actions
+- `AnalyticsTable`: recall count bars
+- `UsersTable`: avatar, revoke key
+- `Skeleton` component (loading state with block elements)
+- `StatTile` component
+- `Accordion` + `AccordionItem` components
+- `ChecklistItem` component
+- `useCopyButton` hook for clipboard
+- `useGridMode` toggle
+- `NoSession` → "Sign in with Slack" card with Slack logo SVG + how-it-works steps
 
-Font stack (already configured in dashboard's `tailwind.css`):
-- Heading: `Archivo Black` (from `mx-icons` vendor, already in `public/`)
-- Body: `Space Grotesk` (from Google Fonts CDN)
-- Code/mono: `Geist Mono`
+### 5. Personal Dashboard (`MePage.tsx`)
+- Nav bar matching main dashboard
+- Row cards for namespaces
+- Empty state
 
-Theme tokens:
-```css
---color-bg: #ffffff
---color-surface: #fafafa
---color-text: #111111
---color-text-muted: #666666
---color-border: #dddddd
---color-accent: #2563eb
-```
-New accent color: `#ffdc58` (yellow), black borders `2px solid #000000`.
+### 6. Backend — Memories API (`src/dashboard/api.ts`)
+- `GET /api/dashboard/memories` — returns all namespaces with messageCount and fileCount per namespace
 
----
+### 7. Backend — Slack OAuth (`src/server.ts`)
+- `GET /auth/slack` — redirects to Slack OAuth authorize URL with scopes + user_scope
+- `GET /auth/slack/callback` — exchanges code for token, looks up workspace by teamId, issues `recall_user_session` cookie, redirects to `/dashboard/me`
 
-## Changes
-
-### 1. New CSS styles — `dashboard-web/src/theme.css`
-
-Add neobrutalist tokens and classes at the end of the file.
-
-**New CSS variables:**
-```css
---font-head: 'Archivo Black', sans-serif;
---font-sans: 'Space Grotesk', sans-serif;
---color-accent-yellow: #ffdc58;
---color-accent-yellow-hover: #ffd12e;
---shadow-brutal: 3px 3px 0 #000000;
---shadow-brutal-sm: 2px 2px 0 #000000;
-```
-
-**New classes:**
-- `.heading-xl` — Archivo Black, ~3rem, line-height 0.9
-- `.heading-lg` — Archivo Black, ~2rem, line-height 0.95
-- `.heading-md` — Archivo Black, ~1.5rem
-- `.nav-accent-bar` — top bar in `#ffdc58`
-- `.btn-brutal` — black border, black bg, yellow text, chunky shadow on hover
-- `.btn-brutal-ghost` — outline style
-- `.card-brutal` — white bg, 2px black border, shadow on hover
-- `.tab-brutal` — pill style, yellow active state
-- `.input-brutal` — black border, no rounded corners
-- `.badge-yellow` — inline yellow pill
-
-### 2. Header redesign — `App.tsx` `Dashboard` component
-
-Replace current `<h1>` + `<p>` header with:
-```
-┌─────────────────────────────────────────────────────┐
-│ [RECALL]                              [Grid] [Logout] │  ← nav bar, yellow accent
-├─────────────────────────────────────────────────────┤
-│                                                       │
-│  Your Recall Workspace                    ← h1 Archivo Black
-│  8 threads · 3 users · last active 2h ago            ← subtitle
-│                                                       │
-│  ┌─────────────────────────────────────────────────┐  │
-│  │ MCP Endpoint: recall-bot.up.railway.app/mcp  [Copy] │  ← NEW
-│  └─────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
-```
-
-- Import Google Fonts via `<link>` in `index.html` (Archivo Black + Space Grotesk)
-- Nav bar: solid black top bar with workspace name left, logout right
-- Yellow accent underline on the logo
-- MCP endpoint box — always visible, with one-click copy (matches existing copy pattern in `GettingStartedSteps`)
-
-### 3. New "Memories" tab — extend `MorphingTabs` in `Dashboard`
-
-Add a **4th tab** called "Memories" to the existing tabs array:
-
-```tsx
-{ id: 'memories', label: 'Memories', content: <MemoriesPanel /> }
-```
-
-**`MemoriesPanel` component** (inline in `App.tsx`):
-
-Shows all messages across namespaces with:
-- Search bar (filters by text, namespace label, channel)
-- Table columns: **Text preview** | **Namespace** | **Channel** | **Blob ID** | **Actions**
-- Blob ID column shows file storage keys (from DB `files.bucketKey`)
-- Copy blobId button (matches `GettingStartedSteps` copy pattern)
-- "Copy Agent" per-namespace button → generates MCP `recall` tool call snippet
-- "Link MD" per-namespace button → generates markdown embed
-
-**Data source:** Fetch `/api/dashboard/namespaces` (already returns namespace list), then for each namespace fetch `/api/dashboard/namespaces/:id/messages`. In production this should be a single aggregated endpoint — add a new one:
-
-**New API endpoint** `GET /api/dashboard/memories` in `src/dashboard/api.ts`:
-```ts
-// Returns all messages across all namespaces with file blobIds
-// Aggregated in one query to avoid N+1
-router.get("/memories", auth, async (req, res) => {
-  const rows = await db.select({
-    namespaceId: namespaces.id,
-    namespaceLabel: namespaces.label,
-    channelId: namespaces.channelId,
-    messageId: messages.id,
-    messageText: messages.text,
-    messageCreatedAt: messages.createdAt,
-    fileId: files.id,
-    fileBucketKey: files.bucketKey,
-    fileOriginalName: files.originalName,
-  })
-  .from(namespaces)
-  .leftJoin(messages, eq(messages.namespaceId, namespaces.id))
-  .leftJoin(files, eq(files.messageId, messages.id))
-  .where(eq(namespaces.workspaceId, req.workspaceId!))
-  // ... returns flat list, frontend groups by namespace
-})
-```
-
-### 4. Copy Agent snippet generation
-
-For each namespace, generate this when user clicks "Copy Agent":
-
-```md
-# Recall Bot — MCP Integration
-
-## Setup
-Your MCP endpoint: `https://recall-bot-production-105d.up.railway.app/mcp`
-Your workspace token: `<user's session cookie>` (auto-handled by browser)
-
-## Recall a namespace
-Use the `recall` MCP tool:
-- tool: `recall`
-- namespace_id: `<namespace UUID>`
-
-Result: all messages + files in that namespace, ready to use as context.
-```
-
-### 5. Namespace list enhancement — NamespacesTable
-
-Add to each row:
-- Search/filter input above table
-- Copy Agent button (per row)
-- Link MD button (per row)
-- Blob ID indicator if namespace has stored files
-
-### 6. Personal dashboard (`MePage.tsx`)
-
-Apply same heading treatment to `PersonalDashboard` and `MeNamespaceDetail`:
-- Import new fonts
-- Replace `<h1>` with `.heading-xl`
-- Add MCP endpoint copy box (personal MCP URL differs)
-
----
-
-## Files to modify
-
+## Files modified
 | File | Change |
 |------|--------|
-| `dashboard-web/src/index.html` | Add Google Fonts `<link>` for Archivo Black + Space Grotesk |
-| `dashboard-web/src/theme.css` | Add neobrutalist CSS tokens and utility classes |
-| `dashboard-web/src/App.tsx` | New header, new Memories tab, enhanced NamespacesTable, copy-agent logic |
-| `src/dashboard/api.ts` | New `GET /api/dashboard/memories` endpoint |
-| `dashboard-web/src/MePage.tsx` | Apply same heading/font treatment |
+| `dashboard-web/src/theme.css` | ~800 lines of neobrutalist CSS |
+| `dashboard-web/src/index.html` | Added Archivo Black + Space Grotesk fonts |
+| `dashboard-web/src/App.tsx` | Full rewrite: nav, stat tiles, tabs, tables, accordion, skeleton, NoSession OAuth |
+| `dashboard-web/src/MePage.tsx` | Nav bar + row cards |
+| `src/dashboard/api.ts` | `GET /api/dashboard/memories` endpoint |
+| `src/server.ts` | `GET /auth/slack` + `GET /auth/slack/callback` OAuth routes |
+| `public/index.html` | Full neobrutalist landing page rewrite |
 
 ## Verification
-
-1. `npm run build` succeeds
-2. Railway deploys successfully (`railway up`)
-3. Dashboard loads at `/dashboard` with new header + tabs
-4. Memories tab shows messages with blobIds
-5. Copy Agent / Link MD buttons work per-namespace
-6. Search filters work in Memories and Namespaces tabs
+1. `npm run build` ✅ (builds clean)
+2. Railway deploys ✅
+3. `/` → landing page with yellow nav, hero, MCP bar, stat tiles ✅
+4. `/dashboard` → no session shows "Sign in with Slack" card with Slack logo ✅
+5. Clicking "Sign in with Slack" → redirects to Slack OAuth ✅
+6. After OAuth → lands on `/dashboard/me` with personal session ✅
+7. `/dashboard` (logged in) → workspace dashboard with stat tiles, tabs, MCP box ✅
+8. Skeleton loading state shows block elements with pulse animation ✅

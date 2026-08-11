@@ -8,6 +8,12 @@ interface MessageFile {
   originalName: string;
   mimeType: string;
   status: string;
+  walrusBlobId: string | null;
+  walrusBlobObjectId: string | null;
+  walrusTxDigest: string | null;
+  walrusEndEpoch: string | null;
+  walrusStorageStatus: string;
+  walrusStoredAt: string | null;
 }
 
 interface MessageRow {
@@ -18,6 +24,9 @@ interface MessageRow {
   text: string;
   slackTs: string;
   walrusBlobId: string | null;
+  walrusBlobObjectId: string | null;
+  walrusTxDigest: string | null;
+  walrusEndEpoch: string | null;
   walrusStorageStatus: string;
   walrusStoredAt: string | null;
   createdAt: string;
@@ -245,6 +254,38 @@ function fileTypeIcon(mimeType: string, originalName: string): typeof DocumentOu
   return DocumentOutline;
 }
 
+function WalrusProof({
+  status,
+  blobId,
+  label = "Walrus",
+}: {
+  status: string;
+  blobId: string | null;
+  label?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copyBlobId = () => {
+    if (!blobId) return;
+    navigator.clipboard?.writeText(blobId).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
+
+  return (
+    <div className={`walrus-proof walrus-proof--${status}`}>
+      <span className="walrus-proof-status">{label}: {status}</span>
+      {blobId ? (
+        <button type="button" className="walrus-proof-copy" onClick={copyBlobId} title="Copy Walrus blob ID">
+          <code className="walrus-proof-blob">{blobId}</code>
+          <span>{copied ? "Copied" : "Copy"}</span>
+        </button>
+      ) : (
+        <span className="walrus-proof-empty">No blob ID yet</span>
+      )}
+    </div>
+  );
+}
+
 function FileBadge({ file, apiBase }: { file: MessageFile; apiBase: string }) {
   const modifier = file.status === "failed" ? "file-badge--failed" : file.status === "pending" ? "file-badge--pending" : "";
   const Icon = fileTypeIcon(file.mimeType, file.originalName);
@@ -264,9 +305,12 @@ function FileBadge({ file, apiBase }: { file: MessageFile; apiBase: string }) {
     );
   }
   return (
-    <a className="file-badge" title={file.mimeType} href={`${apiBase}/files/${file.id}`} target="_blank" rel="noopener noreferrer">
-      {inner}
-    </a>
+    <span className="file-badge-wrap">
+      <a className="file-badge" title={file.mimeType} href={`${apiBase}/files/${file.id}`} target="_blank" rel="noopener noreferrer">
+        {inner}
+      </a>
+      <WalrusProof label="File Walrus" status={file.walrusStorageStatus} blobId={file.walrusBlobId} />
+    </span>
   );
 }
 
@@ -348,14 +392,7 @@ export function NamespaceDetail({
                       </div>
                     )}
                     {m.text && <p className="message-row-text">{renderMrkdwn(m.text, linearIssues, mentionNames)}</p>}
-                    <div className={`walrus-proof walrus-proof--${m.walrusStorageStatus}`}>
-                      <span className="walrus-proof-status">Walrus: {m.walrusStorageStatus}</span>
-                      {m.walrusBlobId ? (
-                        <code className="walrus-proof-blob">{m.walrusBlobId}</code>
-                      ) : (
-                        <span className="walrus-proof-empty">No blob ID yet</span>
-                      )}
-                    </div>
+                    <WalrusProof status={m.walrusStorageStatus} blobId={m.walrusBlobId} />
                     {m.files.length > 0 && (
                       <div className="message-files">
                         {m.files.map((f) => (

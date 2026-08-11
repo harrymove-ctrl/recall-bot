@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../../src/db/client.js";
-import { messages, namespaces, workspaces } from "../../src/db/schema.js";
-import { persistMessageToWalrus } from "../../src/storage/walrusMemory.js";
+import { files, messages, namespaces, workspaces } from "../../src/db/schema.js";
+import { persistFileToWalrus, persistMessageToWalrus, readWalrusBlob } from "../../src/storage/walrusMemory.js";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -40,7 +40,7 @@ describe("persistMessageToWalrus", () => {
     });
 
     const [row] = await db.select().from(messages).where(eq(messages.id, message.id));
-    expect(result).toEqual({ status: "pending", blobId: null });
+    expect(result).toEqual({ status: "pending", blobId: null, blobObjectId: null, txDigest: null, endEpoch: null });
     expect(row.walrusStorageStatus).toBe("pending");
     expect(row.walrusBlobId).toBeNull();
   });
@@ -50,7 +50,15 @@ describe("persistMessageToWalrus", () => {
     vi.stubEnv("WALRUS_PUBLISHER_URL", "https://walrus.example/publish");
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ blobId: "walrus-blob-123" }),
+      json: async () => ({
+        newlyCreated: {
+          blobObject: {
+            id: "0xblob-object",
+            blobId: "walrus-blob-123",
+            storage: { endEpoch: 42 },
+          },
+        },
+      }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -68,14 +76,22 @@ describe("persistMessageToWalrus", () => {
     });
 
     const [row] = await db.select().from(messages).where(eq(messages.id, message.id));
-    expect(result).toEqual({ status: "stored", blobId: "walrus-blob-123" });
+    expect(result).toEqual({
+      status: "stored",
+      blobId: "walrus-blob-123",
+      blobObjectId: "0xblob-object",
+      txDigest: null,
+      endEpoch: "42",
+    });
     expect(row.walrusStorageStatus).toBe("stored");
     expect(row.walrusBlobId).toBe("walrus-blob-123");
+    expect(row.walrusBlobObjectId).toBe("0xblob-object");
+    expect(row.walrusEndEpoch).toBe("42");
     expect(row.walrusStoredAt).toBeInstanceOf(Date);
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://walrus.example/publish",
+      "https://walrus.example/publish/v1/blobs",
       expect.objectContaining({
-        method: "POST",
+        method: "PUT",
         headers: { "content-type": "application/json" },
       }),
     );
@@ -101,9 +117,86 @@ describe("persistMessageToWalrus", () => {
     });
 
     const [row] = await db.select().from(messages).where(eq(messages.id, message.id));
-    expect(result).toEqual({ status: "failed", blobId: null });
+    expect(result).toEqual({ status: "failed", blobId: null, blobObjectId: null, txDigest: null, endEpoch: null });
     expect(row.walrusStorageStatus).toBe("failed");
     expect(row.walrusBlobId).toBeNull();
     consoleError.mockRestore();
+  });
+
+  it("stores alreadyCertified publisher responses", async () => {
+    const { workspace, namespace, message } = await seedMessage();
+    vi.stubEnv("WALRUS_PUBLISHER_URL", "https://walrus.example/publish");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          alreadyCertified: {
+            blobId: "walrus-existing",
+            event: { txDigest: "digest-1" },
+            endEpoch: 99,
+          },
+        }),
+      }),
+    );
+
+    const result = await persistMessageToWalrus({
+      db,
+      messageId: message.id,
+      workspaceId: workspace.id,
+      namespaceId: namespace.id,
+      channelId: namespace.channelId,
+      threadTs: namespace.threadTs,
+      slackUserId: message.slackUserId,
+      slackTs: message.slackTs,
+      text: message.text,
+      createdAt: message.createdAt,
+    });
+
+    expect(result).toEqual({
+      status: "stored",
+      blobId: "walrus-existing",
+      blobObjectId: null,
+      txDigest: "digest-1",
+      endEpoch: "99",
+    });
+  });
+
+  it("stores file blobs on Walrus", async () => {
+    const { message } = await seedMessage();
+    const [file] = await db
+      .insert(files)
+      .values({ messageId: message.id, originalName: "report.txt", mimeType: "text/plain", status: "stored", bucketKey: "bucket-key" })
+      .returning();
+    vi.stubEnv("WALRUS_PUBLISHER_URL", "https://walrus.example");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ newlyCreated: { blobObject: { blobId: "file-blob" } } }),
+      }),
+    );
+
+    await persistFileToWalrus({ db, fileId: file.id, bytes: Buffer.from("file"), mimeType: "text/plain" });
+
+    const [row] = await db.select().from(files).where(eq(files.id, file.id));
+    expect(row.walrusBlobId).toBe("file-blob");
+    expect(row.walrusStorageStatus).toBe("stored");
+  });
+
+  it("reads a Walrus blob through the configured aggregator", async () => {
+    vi.stubEnv("WALRUS_AGGREGATOR_URL", "https://aggregator.example");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        arrayBuffer: async () => new TextEncoder().encode("hello").buffer,
+      }),
+    );
+
+    const bytes = await readWalrusBlob("blob/id");
+
+    expect(new TextDecoder().decode(bytes ?? new Uint8Array())).toBe("hello");
+    expect(fetch).toHaveBeenCalledWith("https://aggregator.example/v1/blobs/blob%2Fid");
   });
 });

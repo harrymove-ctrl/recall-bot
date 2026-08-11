@@ -19,38 +19,52 @@ Recall Bot should treat Walrus Memory as the primary memory store. Postgres rema
 
 ## Data model checklist
 
-- Add `messages.walrus_blob_id`.
-- Add `messages.walrus_storage_status`.
-- Add `messages.walrus_stored_at`.
-- Later: add file-level Walrus fields if attachments become Walrus-backed too.
-- Later: add digest/object/epoch fields if the Walrus publisher returns them.
+- [x] Add `messages.walrus_blob_id`.
+- [x] Add `messages.walrus_storage_status`.
+- [x] Add `messages.walrus_stored_at`.
+- [x] Add message-level proof metadata: blob object ID, tx digest, end epoch.
+- [x] Add file-level Walrus fields for attachments.
+- [x] Add file-level proof metadata: blob object ID, tx digest, end epoch.
 
 ## Capture checklist
 
-- Create namespace as today.
-- Insert Slack messages as today.
-- Publish each new message to Walrus.
-- Update the message row with `walrus_blob_id`, `walrus_storage_status`, and `walrus_stored_at`.
-- If Walrus is not configured, leave the row `pending`, not silently “stored”.
-- If Walrus publish fails, mark the row `failed` while preserving Postgres cache text.
-- Add a backfill job for old rows with no blob ID.
+- [x] Create namespace as today.
+- [x] Insert Slack messages as today.
+- [x] Publish each new message to Walrus through the HTTP publisher API.
+- [x] Update the message row with `walrus_blob_id`, `walrus_storage_status`, and `walrus_stored_at`.
+- [x] Preserve publisher proof metadata when returned by Walrus.
+- [x] If Walrus is not configured, leave the row `pending`, not silently “stored”.
+- [x] If Walrus publish fails, mark the row `failed` while preserving Postgres cache text.
+- [x] Publish Slack attachment bytes to Walrus while keeping existing S3 signed-download behavior.
+- [x] Add a backfill job for old message rows with no blob ID.
+- [x] Add a backfill job for old stored file rows with no blob ID.
 
 ## Dashboard checklist
 
-- Show each message's Walrus status.
-- Show each message's Walrus blob ID when available.
-- Make blob IDs copyable.
-- Show namespace-level counts: messages, files, Walrus-stored messages.
-- Warn when a message is only cached in Postgres.
+- [x] Show each message's Walrus status.
+- [x] Show each message's Walrus blob ID when available.
+- [x] Show file-level Walrus status/blob ID for attachments.
+- [x] Make blob IDs copyable.
+- [x] Show namespace-level counts: messages, files, Walrus-stored messages.
+- [x] Warn when a message is only cached in Postgres by showing `pending`/`failed` and “No blob ID yet”.
 
 ## MCP checklist
 
-- Keep delegate-key scoping per Slack user.
-- `recall(namespaceId)` returns content plus `walrusBlobId` and `walrusStorageStatus`.
-- Add `list_namespaces()` for user-scoped namespace discovery.
-- Add `memory_plan(namespaceId)` after recall is Walrus-backed.
-- Add `memory_checklist(namespaceId)` after recall is Walrus-backed.
-- Optional: add `verify_blob(messageId)` to fetch/verify the Walrus blob.
+- [x] Keep delegate-key scoping per Slack user.
+- [x] `recall(namespaceId)` returns content plus `walrusBlobId` and `walrusStorageStatus`.
+- [x] `recall(namespaceId)` uses Walrus blob content when `WALRUS_AGGREGATOR_URL` is configured and the blob is readable; Postgres is the fallback cache.
+- [x] Add `list_namespaces()` for user-scoped namespace discovery.
+- [x] Add `memory_plan(namespaceId)`.
+- [x] Add `memory_checklist(namespaceId)`.
+- [x] Add `verify_blob(namespaceId, messageId)` to fetch/verify the Walrus blob.
+
+## Production configuration
+
+- `WALRUS_PUBLISHER_URL`: base publisher endpoint. The app calls `PUT {WALRUS_PUBLISHER_URL}/v1/blobs`.
+- `WALRUS_AGGREGATOR_URL`: base aggregator endpoint. The app calls `GET {WALRUS_AGGREGATOR_URL}/v1/blobs/{blobId}` for verification and Walrus-primary recall.
+- Optional: `WALRUS_EPOCHS`, `WALRUS_PERMANENT`, `WALRUS_DELETABLE`, `WALRUS_SEND_OBJECT_TO`.
+
+Without `WALRUS_PUBLISHER_URL`, new captures remain `pending`. Without `WALRUS_AGGREGATOR_URL`, recall still returns cached Postgres text plus blob proof metadata, but it cannot verify/read the blob at recall time.
 
 ## First PR-sized patch
 

@@ -144,6 +144,9 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
           text: m.text,
           slackTs: m.slackTs,
           walrusBlobId: m.walrusBlobId,
+          walrusBlobObjectId: m.walrusBlobObjectId,
+          walrusTxDigest: m.walrusTxDigest,
+          walrusEndEpoch: m.walrusEndEpoch,
           walrusStorageStatus: m.walrusStorageStatus,
           walrusStoredAt: m.walrusStoredAt,
           createdAt: m.createdAt,
@@ -152,6 +155,12 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
             originalName: f.originalName,
             mimeType: f.mimeType,
             status: f.status,
+            walrusBlobId: f.walrusBlobId,
+            walrusBlobObjectId: f.walrusBlobObjectId,
+            walrusTxDigest: f.walrusTxDigest,
+            walrusEndEpoch: f.walrusEndEpoch,
+            walrusStorageStatus: f.walrusStorageStatus,
+            walrusStoredAt: f.walrusStoredAt,
           })),
         };
       }),
@@ -309,7 +318,7 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
     }
 
     // Count messages + files per namespace in a single query
-    const [messageCounts, fileCounts] = await Promise.all([
+    const [messageCounts, fileCounts, walrusMessageCounts] = await Promise.all([
       db
         .select({ namespaceId: messages.namespaceId, count: count(messages.id) })
         .from(messages)
@@ -321,10 +330,16 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
         .innerJoin(messages, eq(files.messageId, messages.id))
         .where(inArray(messages.namespaceId, namespaceIds))
         .groupBy(messages.namespaceId),
+      db
+        .select({ namespaceId: messages.namespaceId, count: count(messages.walrusBlobId) })
+        .from(messages)
+        .where(inArray(messages.namespaceId, namespaceIds))
+        .groupBy(messages.namespaceId),
     ]);
 
     const messageCountMap = new Map(messageCounts.map((r) => [r.namespaceId, r.count]));
     const fileCountMap = new Map(fileCounts.map((r) => [r.namespaceId ?? '', r.count]));
+    const walrusMessageCountMap = new Map(walrusMessageCounts.map((r) => [r.namespaceId, r.count]));
 
     res.json(
       rows.map((n) => ({
@@ -336,6 +351,7 @@ export function createDashboardApiRouter(db: Database, sessionSecret: string): R
         createdAt: n.createdAt,
         messageCount: messageCountMap.get(n.id) ?? 0,
         fileCount: fileCountMap.get(n.id) ?? 0,
+        walrusStoredMessageCount: walrusMessageCountMap.get(n.id) ?? 0,
       })),
     );
   });

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Database } from "../db/client.js";
 import { files } from "../db/schema.js";
 import { putFile } from "../storage/bucket.js";
+import { persistFileToWalrus } from "../storage/walrusMemory.js";
 
 export interface SlackFileObject {
   id: string;
@@ -47,7 +48,9 @@ export async function captureSlackFile(params: CaptureSlackFileParams): Promise<
       `captureSlackFile: skipping oversize Slack file ${file.id} (${file.name}) for message ${messageId}: ` +
         `${file.size} bytes exceeds the ${MAX_FILE_SIZE_BYTES} byte limit`,
     );
-    await db.insert(files).values({ messageId, originalName: file.name, mimeType: file.mimetype, status: "failed" });
+    await db
+      .insert(files)
+      .values({ messageId, originalName: file.name, mimeType: file.mimetype, status: "failed", walrusStorageStatus: "failed" });
     return;
   }
 
@@ -61,6 +64,7 @@ export async function captureSlackFile(params: CaptureSlackFileParams): Promise<
     const bucketKey = `messages/${messageId}/${file.id}-${file.name}`;
     await putFile(bucketKey, bytes, file.mimetype);
     await db.update(files).set({ bucketKey, status: "stored" }).where(eq(files.id, fileRow.id));
+    await persistFileToWalrus({ db, fileId: fileRow.id, bytes, mimeType: file.mimetype });
   } catch (error) {
     // Capture failures are swallowed on purpose (one bad attachment must not abort a backfill),
     // so this log is the only signal that anything went wrong — it has to carry enough to
@@ -69,6 +73,6 @@ export async function captureSlackFile(params: CaptureSlackFileParams): Promise<
       `captureSlackFile: failed to capture Slack file ${file.id} (${file.name}) for message ${messageId}:`,
       error,
     );
-    await db.update(files).set({ status: "failed" }).where(eq(files.id, fileRow.id));
+    await db.update(files).set({ status: "failed", walrusStorageStatus: "failed" }).where(eq(files.id, fileRow.id));
   }
 }

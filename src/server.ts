@@ -84,10 +84,31 @@ export function buildApp(database: Database): Express {
     const publicBaseUrl = requireEnv("PUBLIC_BASE_URL");
     const state = signSlackAuthState(requireEnv("SLACK_STATE_SECRET"));
     const redirectUri = `${publicBaseUrl}/auth/slack/callback`;
-    const url = new URL("https://slack.com/openid/connect/authorize");
-    url.searchParams.set("response_type", "code");
+    const url = new URL("https://slack.com/oauth/v2/authorize");
     url.searchParams.set("client_id", clientId);
-    url.searchParams.set("scope", "openid profile");
+    url.searchParams.set("scope", [
+      "app_mentions:read",
+      "channels:history",
+      "groups:history",
+      "im:history",
+      "mpim:history",
+      "chat:write",
+      "im:write",
+      "files:read",
+      "commands",
+      "users:read",
+    ].join(","));
+    url.searchParams.set("user_scope", [
+      "app_mentions:read",
+      "channels:history",
+      "groups:history",
+      "im:history",
+      "mpim:history",
+      "chat:write",
+      "im:write",
+      "files:read",
+      "users:read",
+    ].join(","));
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     res.redirect(302, url.toString());
@@ -115,23 +136,24 @@ export function buildApp(database: Database): Express {
 
     try {
       const client = new WebClient(clientSecret ? undefined : undefined);
-      const result = await client.openid.connect.token({
+      const result = await client.oauth.v2.access({
         client_id: clientId,
         client_secret: clientSecret,
         redirect_uri: `${publicBaseUrl}/auth/slack/callback`,
         code,
       });
 
-      if (!result.access_token) {
-        throw new Error("Missing access token from Slack OpenID response");
+      if (!result.authed_user?.id) {
+        throw new Error("Missing authed user from OAuth v2 response");
       }
 
-      const userInfo = await new WebClient(result.access_token).openid.connect.userInfo();
-      const teamId = userInfo["https://slack.com/team_id"];
-      const userId = userInfo["https://slack.com/user_id"];
+      // Get user identity (team + user id) via dedicated identity API
+      const identity = await new WebClient(result.authed_user.access_token!).users.identity({});
+      const teamId = identity.team?.id;
+      const userId = identity.user?.id;
 
       if (!teamId || !userId) {
-        throw new Error("Missing team or user id from Slack OpenID userInfo response");
+        throw new Error("Missing team or user id from users.identity response");
       }
 
       // Find workspace by teamId

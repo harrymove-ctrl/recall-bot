@@ -271,6 +271,23 @@ a:hover {
   white-space: nowrap;
 }
 
+.walrus-proof-copy {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  padding: 0;
+}
+
+.walrus-proof-copy span {
+  color: var(--color-text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .walrus-proof-empty {
   color: var(--color-text-muted);
   font-size: 0.72rem;
@@ -283,6 +300,13 @@ a:hover {
 
 .walrus-proof--failed {
   background: #fee2e2;
+}
+
+.file-badge-wrap {
+  align-items: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .avatar-initials {
