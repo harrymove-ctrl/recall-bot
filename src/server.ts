@@ -2,16 +2,20 @@ import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import { WebClient } from "@slack/web-api";
+import { eq } from "drizzle-orm";
 import type { Express } from "express";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { Database } from "./db/client.js";
 import { db } from "./db/client.js";
+import { workspaces } from "./db/schema.js";
 import { createSlackReceiver, createSlackApp } from "./slack/receiver.js";
 import { registerEventHandlers } from "./slack/events.js";
 import { registerRecallKeyCommand } from "./slack/recallKeyCommand.js";
 import { mountMcpServer } from "./mcp/server.js";
 import { createDashboardApiRouter } from "./dashboard/api.js";
 import { createMeApiRouter } from "./dashboard/meApi.js";
+import { createUserSessionCookie } from "./dashboard/userSession.js";
 
 // Resolved from this file rather than process.cwd() so it works whether this runs from
 // src/server.ts (tsx) or the compiled dist/server.js — both sit one level below the
@@ -41,6 +45,102 @@ export function buildApp(database: Database): Express {
 
   app.get("/healthz", (_req, res) => {
     res.status(200).json({ ok: true });
+  });
+
+  // ── Slack OAuth ──────────────────────────────────────────────────────
+  // Personal sign-in: any workspace member can authenticate directly.
+  // No claim token needed — exchanges an OAuth code for a user session cookie.
+
+  app.get("/auth/slack", (req, res) => {
+    const clientId = requireEnv("SLACK_CLIENT_ID");
+    const publicBaseUrl = requireEnv("PUBLIC_BASE_URL");
+    const state = Buffer.from(JSON.stringify({ ts: Date.now() }), "utf8").toString("base64url");
+    const redirectUri = `${publicBaseUrl}/auth/slack/callback`;
+    const scopes = [
+      "app_mentions:read",
+      "channels:history",
+      "groups:history",
+      "im:history",
+      "mpim:history",
+      "chat:write",
+      "im:write",
+      "files:read",
+      "commands",
+      "users:read",
+    ].join(",");
+    const url = new URL("https://slack.com/oauth/v2/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("scope", scopes);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("state", state);
+    // user_scope for personal token (needed for identity)
+    url.searchParams.set("user_scope", "app_mentions:read,channels:history,groups:history,im:history,mpim:history,chat:write,im:write,files:read,users:read");
+    res.redirect(302, url.toString());
+  });
+
+  app.get("/auth/slack/callback", async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
+    const publicBaseUrl = requireEnv("PUBLIC_BASE_URL");
+    const clientId = requireEnv("SLACK_CLIENT_ID");
+    const clientSecret = requireEnv("SLACK_CLIENT_SECRET");
+
+    if (error) {
+      res.redirect(`/?slack_auth_error=${encodeURIComponent(error)}`);
+      return;
+    }
+    if (!code) {
+      res.redirect("/?slack_auth_error=no_code");
+      return;
+    }
+
+    try {
+      const client = new WebClient(clientSecret ? undefined : undefined);
+      const result = await client.oauth.v2.access({
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: `${publicBaseUrl}/auth/slack/callback`,
+        code,
+      });
+
+      const teamId = result.team?.id;
+      const userId = result.authed_user?.id;
+
+      if (!teamId || !userId) {
+        throw new Error("Missing team or user id from OAuth response");
+      }
+
+      // Find workspace by teamId
+      const [workspace] = await database
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.slackTeamId, teamId));
+
+      if (!workspace) {
+        res.redirect("/?slack_auth_error=workspace_not_found");
+        return;
+      }
+
+      // Issue user session cookie
+      const userSessionSecret = requireEnv("USER_SESSION_SECRET");
+      const cookie = createUserSessionCookie(
+        workspace.id,
+        userId,
+        userSessionSecret,
+        1000 * 60 * 60 * 24 * 7,
+      );
+      res.cookie("recall_user_session", cookie, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        path: "/",
+      });
+
+      res.redirect("/dashboard/me");
+    } catch (err) {
+      console.error("Slack OAuth callback error:", err);
+      res.redirect("/?slack_auth_error=callback_failed");
+    }
   });
 
   app.get("/", (_req, res) => {

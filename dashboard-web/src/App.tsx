@@ -438,7 +438,7 @@ export function NoSession() {
           <span className="nav-bar-brand-name">Recall Bot</span>
         </a>
         <div className="nav-bar-actions">
-          <a href="/slack/install" className="btn-brutal btn-brutal-sm btn-brutal-yellow">Add to Slack</a>
+          <a href="/auth/slack" className="btn-brutal btn-brutal-sm btn-brutal-yellow">Sign in with Slack</a>
         </div>
       </nav>
       <div className="page">
@@ -447,65 +447,75 @@ export function NoSession() {
           <span className="breadcrumb-sep">›</span>
           <span className="breadcrumb-item breadcrumb-item--current">Dashboard</span>
         </div>
-        <h1 className="heading-xl">Recall Bot Dashboard</h1>
-        <p className="subtitle">Manage your workspace's captured threads and coding agents.</p>
 
-        {/* Alert */}
-        <div className="alert alert-warn" style={{ marginBottom: 24 }}>
-          <div className="alert-icon">!</div>
-          <div>
-            <h4 className="alert-title">No active session</h4>
-            <p className="alert-desc">
-              Check your Slack DM from <span className="kbd-brutal">@recall-bot</span> for the dashboard setup link. Missed it?{" "}
-              <a href="/" style={{ fontWeight: 700, textDecoration: "underline" }}>Reinstall the app</a>.
+        <h1 className="heading-xl">Recall Bot Dashboard</h1>
+        <p className="subtitle">Sign in with your Slack account to access and manage your captured threads.</p>
+
+        {/* Sign in card */}
+        <div className="sign-in-card">
+          <div className="sign-in-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52z" fill="#E01E5A"/>
+              <path d="M6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z" fill="#E01E5A"/>
+              <path d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834z" fill="#36C5F0"/>
+              <path d="M8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" fill="#36C5F0"/>
+              <path d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834z" fill="#2EB67D"/>
+              <path d="M17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z" fill="#2EB67D"/>
+              <path d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52z" fill="#ECB22E"/>
+              <path d="M15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" fill="#ECB22E"/>
+            </svg>
+          </div>
+          <div className="sign-in-body">
+            <h2 className="sign-in-title">Sign in with Slack</h2>
+            <p className="sign-in-desc">
+              Authenticate with your Slack account to access your personal dashboard and manage captured threads.
+            </p>
+            <a href="/auth/slack" className="btn-brutal btn-brutal-yellow sign-in-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52z" fill="#E01E5A"/>
+                <path d="M6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z" fill="#E01E5A"/>
+                <path d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834z" fill="#36C5F0"/>
+                <path d="M8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" fill="#36C5F0"/>
+                <path d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834z" fill="#2EB67D"/>
+                <path d="M17.688 8.834a2.527 2.527 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z" fill="#2EB67D"/>
+                <path d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52z" fill="#ECB22E"/>
+                <path d="M15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" fill="#ECB22E"/>
+              </svg>
+              Sign in with Slack
+            </a>
+            <p className="sign-in-hint">
+              You'll be redirected to Slack to authorize. Works for any member of a workspace that has recall-bot installed.
             </p>
           </div>
         </div>
 
-        {/* Onboarding */}
-        <div className="onboarding-card">
-          <div className="onboarding-card-header">
-            <div className="section-heading" style={{ margin: 0 }}>
-              <div className="section-heading-dot" />
-              <div className="section-heading-text">Setup Checklist</div>
-            </div>
+        {/* Getting started steps */}
+        <div style={{ marginTop: 36 }}>
+          <div className="section-heading">
+            <div className="section-heading-dot" />
+            <div className="section-heading-text">How recall-bot works</div>
           </div>
-          <div className="checklist">
-            <ChecklistItem step={{
-              id: "install",
-              emoji: "1",
-              title: "Install recall-bot in Slack",
-              description: "Authorize recall-bot for your workspace. Requires workspace admin permission.",
-              action: { label: "Add to Slack", href: "/slack/install" },
-              status: "pending",
-            }} />
-            <ChecklistItem step={{
-              id: "capture",
-              emoji: "2",
-              title: "Capture your first thread",
-              description: 'Tag @recall-bot on any Slack thread to capture messages and files.',
-              status: "pending",
-            }} />
-            <ChecklistItem step={{
-              id: "key",
-              emoji: "3",
-              title: "Get your delegate key",
-              description: 'DM @recall-bot with /recall-key to receive your personal delegate key.',
-              status: "pending",
-            }} />
-            <ChecklistItem step={{
-              id: "mcp",
-              emoji: "4",
-              title: "Connect a coding agent via MCP",
-              description: `Use the MCP endpoint below with your delegate key as Bearer token.`,
-              action: { label: copied ? "✓ Copied!" : "Copy MCP URL", href: "#" },
-              status: "pending",
-            }} />
+          <div className="steps-row">
+            <div className="step-card">
+              <div className="step-card-num">1</div>
+              <h3>Install the app</h3>
+              <p>Workspace admin approves the requested Slack permissions. Any workspace member can then sign in.</p>
+            </div>
+            <div className="step-card">
+              <div className="step-card-num">2</div>
+              <h3>Tag threads</h3>
+              <p>Tag <span className="kbd-brutal">@recall-bot</span> on any Slack thread to capture messages and files.</p>
+            </div>
+            <div className="step-card">
+              <div className="step-card-num">3</div>
+              <h3>Recall with agents</h3>
+              <p>Use <span className="kbd-brutal">/recall-key</span> to get your delegate key, then connect via MCP.</p>
+            </div>
           </div>
         </div>
 
         {/* MCP box */}
-        <div className="mcp-box" style={{ marginTop: 24 }}>
+        <div className="mcp-box" style={{ marginTop: 32 }}>
           <div className="mcp-box-label">MCP Endpoint</div>
           <div className="mcp-box-row">
             <code className="mcp-box-url">{mcpUrl}</code>
