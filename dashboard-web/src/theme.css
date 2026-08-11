@@ -1602,3 +1602,496 @@ a:hover {
   transform: translate(3px, 3px);
   box-shadow: none;
 }
+
+/* ── Onboarding / Checklist ── */
+
+.onboarding-card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 #000000;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.onboarding-card-header {
+  padding: 18px 22px;
+  background: #fffbf0;
+  border-bottom: 2px solid #000000;
+}
+
+.onboarding-progress {
+  width: 100%;
+  height: 10px;
+  background: #efe7d6;
+  border: 1.5px solid #000000;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.onboarding-progress-bar {
+  height: 100%;
+  background: var(--color-yellow);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.onboarding-progress-label {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #555555;
+  margin-bottom: 18px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.checklist-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px 22px;
+  border-bottom: 1.5px solid #e5e0d8;
+  transition: background 0.12s;
+}
+
+.checklist-item:last-child {
+  border-bottom: none;
+}
+
+.checklist-item:hover {
+  background: #fffbf0;
+}
+
+.checklist-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #efe7d6;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 #000000;
+  font-family: var(--font-head);
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: background 0.12s, transform 0.12s;
+}
+
+.checklist-icon--done {
+  background: var(--color-yellow);
+  color: #000000;
+}
+
+.checklist-item:hover .checklist-icon {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000000;
+}
+
+.checklist-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.checklist-title {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  color: #000000;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.checklist-desc {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  color: #555555;
+  line-height: 1.5;
+}
+
+/* ── Getting started steps ── */
+
+.steps-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.step-card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #000000;
+  padding: 20px 22px;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.step-card:hover {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.step-card-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #000000;
+  color: var(--color-yellow);
+  border-radius: 6px;
+  font-family: var(--font-head);
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.step-card h3 {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  color: #000000;
+}
+
+.step-card p {
+  color: #444444;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Admin callout (landing) ── */
+
+.admin-callout {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 22px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #000000;
+  margin-bottom: 40px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.admin-callout-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: var(--color-yellow);
+  border: 2px solid #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-head);
+  font-size: 16px;
+}
+
+/* ── Scope pills ── */
+
+.scope-pill {
+  display: inline-flex;
+  padding: 4px 12px;
+  background: #ffffff;
+  border: 1.5px solid #000000;
+  border-radius: 4px;
+  box-shadow: 1px 1px 0 #000000;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.scopes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Nav brand ── */
+
+.nb-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #000000;
+}
+
+.nb-nav-brand-icon {
+  width: 32px;
+  height: 32px;
+  background: #000000;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-yellow);
+  font-family: var(--font-head);
+  font-size: 16px;
+}
+
+.nb-nav-brand-name {
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.nb-nav {
+  background: var(--color-yellow);
+  border-bottom: 3px solid #000000;
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nb-nav-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.nb-nav-title {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+/* ── Footer ── */
+
+.footer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+/* ── Hero CTA ── */
+
+.hero-cta {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── MCP bar (landing) ── */
+
+.mcp-bar {
+  background: #000000;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0 #000000;
+  padding: 14px 20px;
+  max-width: 760px;
+  margin: 0 auto 80px;
+  font-family: var(--font-sans);
+}
+
+.mcp-bar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-yellow);
+  margin-bottom: 4px;
+}
+
+.mcp-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mcp-bar-url {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 0.92rem;
+  color: var(--color-yellow);
+  word-break: break-all;
+}
+
+.mcp-bar-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 1.5px solid var(--color-yellow);
+  background: var(--color-yellow);
+  color: #000000;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.mcp-bar-copy:hover { background: var(--color-yellow-hover); }
+.mcp-bar-copy.copied { background: #166534; border-color: #166534; color: white; }
+
+/* ── Getting-started steps styles ── */
+
+.getting-started-panel {
+  margin-bottom: 28px;
+}
+
+.getting-started-panel h2 {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  margin: 0 0 14px;
+}
+
+.getting-started-steps {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.getting-started-steps li {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.getting-started-steps li code {
+  background: #000000;
+  color: var(--color-yellow);
+  padding: 1px 6px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+.getting-started-collapsed {
+  margin-bottom: 28px;
+}
+
+.getting-started-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #555555;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+/* ── Misc ── */
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid #000000;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.issue-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #c7c8e2;
+  border: 1.5px solid #000000;
+  border-radius: 4px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #000000;
+  text-decoration: none;
+  margin: 2px 4px 2px 0;
+  box-shadow: 1px 1px 0 #000000;
+}
+
+.issue-badge:hover {
+  background: var(--color-yellow);
+}
+
+.analytics-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-bar-track {
+  fill: #efe7d6;
+  stroke: #000000;
+  stroke-width: 1;
+}
+
+.analytics-bar-fill {
+  fill: var(--color-yellow);
+  stroke: #000000;
+  stroke-width: 1;
+}
+
+.tabs-panel-content {
+  padding-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .nb-nav {
+    padding: 0 16px;
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .nb-nav-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .page {
+    padding: 40px 16px 64px;
+  }
+
+  .hero h1 {
+    font-size: 2.1rem;
+  }
+
+  .hero-cta .nb-btn {
+    padding: 12px 22px;
+    font-size: 0.95rem;
+  }
+
+  .checklist-item {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .checklist-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 0.9rem;
+  }
+
+  .mcp-bar {
+    padding: 12px 16px;
+  }
+
+  .mcp-bar-url {
+    font-size: 0.78rem;
+  }
+}

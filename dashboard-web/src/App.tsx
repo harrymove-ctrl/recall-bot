@@ -288,14 +288,241 @@ function ClaimView() {
   return <p>Setting up your dashboard…</p>;
 }
 
-export function NoSession() {
+// ─── Onboarding Checklist ───────────────────────────────────────
+
+interface OnboardingStep {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  action?: { label: string; href: string };
+  status: "done" | "pending";
+}
+
+function ChecklistItem({ step }: { step: OnboardingStep }) {
   return (
-    <div>
-      <p>No active session — check your Slack DM for the dashboard setup link.</p>
-      <p>
-        Missed the DM, or need to reinstall? <a href="/">Visit the recall-bot install page</a>.
-      </p>
+    <div className="checklist-item">
+      <div className={`checklist-icon ${step.status === "done" ? "checklist-icon--done" : ""}`}>
+        {step.status === "done" ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <span>{step.emoji}</span>
+        )}
+      </div>
+      <div className="checklist-body">
+        <div className="checklist-title">{step.title}</div>
+        <div className="checklist-desc">{step.description}</div>
+        {step.action && (
+          <a href={step.action.href} className="btn-brutal btn-brutal-sm" style={{ marginTop: 8, display: "inline-flex" }}>
+            {step.action.label}
+          </a>
+        )}
+      </div>
     </div>
+  );
+}
+
+function WorkspaceOnboarding({ workspaceName }: { workspaceName: string }) {
+  const origin = window.location.origin;
+  const mcpUrl = `${origin}/mcp`;
+  const { copied, copy } = useCopyButton();
+
+  const steps: OnboardingStep[] = [
+    {
+      id: "install",
+      emoji: "1",
+      title: "Install recall-bot in your Slack workspace",
+      description: "Click the button below to authorize recall-bot for your workspace. You'll need workspace admin permission.",
+      action: { label: "Add to Slack", href: "/slack/install" },
+      status: "pending",
+    },
+    {
+      id: "capture",
+      emoji: "2",
+      title: "Capture your first thread",
+      description: "Go to any Slack channel and tag @recall-bot on a thread you want to remember. The bot will capture the full thread and store it.",
+      status: "pending",
+    },
+    {
+      id: "key",
+      emoji: "3",
+      title: "Get your delegate key",
+      description: "DM @recall-bot with /recall-key to receive a personal delegate key. This key lets your coding agent authenticate with recall-bot.",
+      status: "pending",
+    },
+    {
+      id: "mcp",
+      emoji: "4",
+      title: "Connect your coding agent via MCP",
+      description: "Point your agent (Cursor, Claude Code, Codex) at the MCP endpoint using your delegate key as a Bearer token.",
+      action: { label: copied ? "Copied!" : "Copy MCP URL", href: "#" },
+      status: "pending",
+    },
+  ];
+
+  return (
+    <div className="page">
+      <div className="breadcrumb">
+        <span className="breadcrumb-item">Recall Bot</span>
+        <span className="breadcrumb-sep">›</span>
+        <span className="breadcrumb-item breadcrumb-item--current">Setup</span>
+      </div>
+
+      <h1 className="heading-xl">Welcome to {workspaceName}</h1>
+      <p className="subtitle">Complete these steps to start capturing and recalling Slack threads with your coding agent.</p>
+
+      {/* Progress bar */}
+      <div className="onboarding-progress">
+        <div className="onboarding-progress-bar" style={{ width: "0%" }} />
+      </div>
+      <p className="onboarding-progress-label">0 / 4 steps complete</p>
+
+      {/* Steps */}
+      <div className="onboarding-card">
+        <div className="onboarding-card-header">
+          <div className="section-heading" style={{ margin: 0 }}>
+            <div className="section-heading-dot" />
+            <div className="section-heading-text">Getting Started Checklist</div>
+          </div>
+        </div>
+        <div className="checklist">
+          {steps.map((step) => (
+            <ChecklistItem key={step.id} step={step} />
+          ))}
+        </div>
+      </div>
+
+      {/* MCP endpoint box */}
+      <div className="mcp-box" style={{ marginTop: 24 }}>
+        <div className="mcp-box-label">MCP Endpoint</div>
+        <div className="mcp-box-row">
+          <code className="mcp-box-url">{mcpUrl}</code>
+          <span className={`tooltip-wrap${copied ? " tooltip-yellow" : ""}`} data-tooltip={copied ? "Copied!" : "Copy MCP URL"}>
+            <button
+              type="button"
+              className={`btn-copy${copied ? " btn-copy--copied" : ""}`}
+              onClick={() => copy(mcpUrl)}
+            >
+              {copied ? "✓ Copied" : "Copy"}
+            </button>
+          </span>
+        </div>
+        <div className="mcp-box-hint">Use this URL to connect AI agents via MCP — you'll need your delegate key from step 3</div>
+      </div>
+
+      {/* Help */}
+      <div className="alert alert-info" style={{ marginTop: 24 }}>
+        <div className="alert-icon">?</div>
+        <div>
+          <h4 className="alert-title">Need help?</h4>
+          <p className="alert-desc">
+            Run <span className="kbd-brutal">/recall-key</span> in a DM with <span className="kbd-brutal">@recall-bot</span> to get your delegate key. Tag <span className="kbd-brutal">@recall-bot</span> on any Slack thread to capture it.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function NoSession() {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const mcpUrl = `${origin}/mcp`;
+  const { copied, copy } = useCopyButton();
+  return (
+    <>
+      <nav className="nav-bar">
+        <a href="/" className="nav-bar-brand">
+          <div className="nav-bar-brand-icon">R</div>
+          <span className="nav-bar-brand-name">Recall Bot</span>
+        </a>
+        <div className="nav-bar-actions">
+          <a href="/slack/install" className="btn-brutal btn-brutal-sm btn-brutal-yellow">Add to Slack</a>
+        </div>
+      </nav>
+      <div className="page">
+        <div className="breadcrumb">
+          <span className="breadcrumb-item">Recall Bot</span>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-item breadcrumb-item--current">Dashboard</span>
+        </div>
+        <h1 className="heading-xl">Recall Bot Dashboard</h1>
+        <p className="subtitle">Manage your workspace's captured threads and coding agents.</p>
+
+        {/* Alert */}
+        <div className="alert alert-warn" style={{ marginBottom: 24 }}>
+          <div className="alert-icon">!</div>
+          <div>
+            <h4 className="alert-title">No active session</h4>
+            <p className="alert-desc">
+              Check your Slack DM from <span className="kbd-brutal">@recall-bot</span> for the dashboard setup link. Missed it?{" "}
+              <a href="/" style={{ fontWeight: 700, textDecoration: "underline" }}>Reinstall the app</a>.
+            </p>
+          </div>
+        </div>
+
+        {/* Onboarding */}
+        <div className="onboarding-card">
+          <div className="onboarding-card-header">
+            <div className="section-heading" style={{ margin: 0 }}>
+              <div className="section-heading-dot" />
+              <div className="section-heading-text">Setup Checklist</div>
+            </div>
+          </div>
+          <div className="checklist">
+            <ChecklistItem step={{
+              id: "install",
+              emoji: "1",
+              title: "Install recall-bot in Slack",
+              description: "Authorize recall-bot for your workspace. Requires workspace admin permission.",
+              action: { label: "Add to Slack", href: "/slack/install" },
+              status: "pending",
+            }} />
+            <ChecklistItem step={{
+              id: "capture",
+              emoji: "2",
+              title: "Capture your first thread",
+              description: 'Tag @recall-bot on any Slack thread to capture messages and files.',
+              status: "pending",
+            }} />
+            <ChecklistItem step={{
+              id: "key",
+              emoji: "3",
+              title: "Get your delegate key",
+              description: 'DM @recall-bot with /recall-key to receive your personal delegate key.',
+              status: "pending",
+            }} />
+            <ChecklistItem step={{
+              id: "mcp",
+              emoji: "4",
+              title: "Connect a coding agent via MCP",
+              description: `Use the MCP endpoint below with your delegate key as Bearer token.`,
+              action: { label: copied ? "✓ Copied!" : "Copy MCP URL", href: "#" },
+              status: "pending",
+            }} />
+          </div>
+        </div>
+
+        {/* MCP box */}
+        <div className="mcp-box" style={{ marginTop: 24 }}>
+          <div className="mcp-box-label">MCP Endpoint</div>
+          <div className="mcp-box-row">
+            <code className="mcp-box-url">{mcpUrl}</code>
+            <span className={`tooltip-wrap${copied ? " tooltip-yellow" : ""}`} data-tooltip={copied ? "Copied!" : "Copy MCP URL"}>
+              <button
+                type="button"
+                className={`btn-copy${copied ? " btn-copy--copied" : ""}`}
+                onClick={() => copy(mcpUrl)}
+              >
+                {copied ? "✓ Copied" : "Copy"}
+              </button>
+            </span>
+          </div>
+          <div className="mcp-box-hint">Connect any MCP-capable agent (Cursor, Claude Code, Codex) using your delegate key</div>
+        </div>
+      </div>
+    </>
   );
 }
 
