@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, useCallback } from "react";
 import { NamespaceDetail } from "./NamespaceDetail";
+import { GraphView } from "./GraphView";
 import { MeClaimView, PersonalDashboard, MeNamespaceDetail } from "./MePage";
 import { MorphingTabs, type MorphingTabsItem } from "./components/motion/morphing-tabs";
 import { BlazeBackground } from "./components/effects/BlazeBackground";
@@ -1189,6 +1190,8 @@ export function App() {
     const namespaceMatch = path.match(/^\/dashboard\/namespaces\/([0-9a-fA-F-]+)$/);
     if (namespaceMatch) {
       view = <NamespaceDetail namespaceId={namespaceMatch[1]} />;
+    } else if (path === "/dashboard/graph") {
+      view = <GraphView />;
     } else if (path === "/dashboard" || path === "/dashboard/") {
       view = <Dashboard />;
     } else {

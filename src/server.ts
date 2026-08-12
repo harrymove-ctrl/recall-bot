@@ -15,6 +15,7 @@ import { registerEventHandlers } from "./slack/events.js";
 import { registerRecallKeyCommand } from "./slack/recallKeyCommand.js";
 import { mountMcpServer } from "./mcp/server.js";
 import { createDashboardApiRouter } from "./dashboard/api.js";
+import { createGraphApiRouter } from "./dashboard/graphApi.js";
 import { createMeApiRouter } from "./dashboard/meApi.js";
 import { createUserSessionCookie } from "./dashboard/userSession.js";
 
@@ -100,7 +101,9 @@ export function buildApp(database: Database): Express {
       "users:read",
     ].join(","));
     // User scopes — exclude bot-only scopes (commands, app_mentions:read)
+    // users.identity:basic is required for users.identity{} to get team + user IDs
     url.searchParams.set("user_scope", [
+      "users.identity:basic",
       "channels:history",
       "groups:history",
       "im:history",
@@ -264,6 +267,7 @@ export function buildApp(database: Database): Express {
     res.status(404).sendFile("index.html", { root: DASHBOARD_DIST });
   });
   app.use("/api/dashboard", createDashboardApiRouter(database, dashboardSessionSecret));
+  app.use("/api/dashboard", createGraphApiRouter(database, dashboardSessionSecret));
   app.use("/api/me", createMeApiRouter(database, userSessionSecret));
 
   mountMcpServer(app, database);

@@ -2436,3 +2436,373 @@ a:hover {
     transition: none;
   }
 }
+
+/* ─── Graph browser ─────────────────────────────────────────────── */
+
+.graph-page {
+  position: relative;
+  height: calc(100vh - 56px); /* subtract nav-bar height */
+  overflow: hidden;
+}
+
+.graph-container {
+  position: absolute;
+  inset: 0;
+  top: 48px; /* below scene bar */
+  background: transparent;
+  cursor: default;
+}
+
+.graph-nodes-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+/* Scene bar */
+.graph-scene-bar {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--cream, #f5f0e8);
+  border: 3px solid var(--black, #0a0a0a);
+  box-shadow: 4px 4px 0 var(--black, #0a0a0a);
+  padding: 4px;
+}
+
+.graph-scene-btn {
+  background: var(--cream, #f5f0e8);
+  border: none;
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.graph-scene-btn:hover {
+  background: var(--yellow, #ffd000);
+}
+
+.graph-scene-btn--active {
+  background: var(--black, #0a0a0a);
+  color: var(--yellow, #ffd000);
+}
+
+.graph-scene-bar__drilldown {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px;
+}
+
+.graph-scene-bar__label {
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  font-size: 0.75rem;
+}
+
+/* Nodes */
+.graph-node {
+  position: absolute;
+  cursor: grab;
+  transition: opacity 0.7s ease;
+  font-family: var(--font-body, 'Space Grotesk', sans-serif);
+  user-select: none;
+}
+
+.graph-node:active {
+  cursor: grabbing;
+}
+
+/* Namespace node — chunky card */
+.graph-node--namespace {
+  width: 190px;
+  min-height: 88px;
+  background: var(--yellow, #ffd000);
+  border: 3px solid var(--black, #0a0a0a);
+  box-shadow: 5px 5px 0 var(--black, #0a0a0a);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.graph-node__label {
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  font-size: 0.8rem;
+  line-height: 1.2;
+  color: var(--black, #0a0a0a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.graph-node__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.graph-node__channel,
+.graph-node__counts {
+  font-size: 0.65rem;
+  color: rgba(10, 10, 10, 0.6);
+  font-family: var(--font-mono, 'Space Mono', monospace);
+}
+
+.graph-node__walrus {
+  font-size: 0.6rem;
+  color: rgba(10, 10, 10, 0.5);
+  font-family: var(--font-mono, 'Space Mono', monospace);
+}
+
+/* User node — avatar circle */
+.graph-node--user {
+  width: 80px;
+  height: 80px;
+  background: var(--cream, #f5f0e8);
+  border: 2px solid var(--black, #0a0a0a);
+  box-shadow: 3px 3px 0 var(--black, #0a0a0a);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.graph-node__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--yellow, #ffd000);
+}
+
+.graph-node__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.graph-node__avatar span {
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  font-size: 0.7rem;
+  color: var(--black, #0a0a0a);
+}
+
+.graph-node__name {
+  font-size: 0.6rem;
+  color: var(--black, #0a0a0a);
+  text-align: center;
+  max-width: 72px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Message sub-node */
+.graph-node--message {
+  width: 140px;
+  height: 56px;
+  background: var(--cream, #f5f0e8);
+  border: 2px solid var(--black, #0a0a0a);
+  box-shadow: 3px 3px 0 rgba(10, 10, 10, 0.3);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+}
+
+.graph-node__snippet {
+  font-size: 0.65rem;
+  color: rgba(10, 10, 10, 0.75);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* File sub-node */
+.graph-node--file {
+  width: 120px;
+  height: 40px;
+  background: #fff;
+  border: 2px solid var(--black, #0a0a0a);
+  box-shadow: 3px 3px 0 rgba(10, 10, 10, 0.3);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+}
+
+.graph-node__filename {
+  font-size: 0.65rem;
+  color: rgba(10, 10, 10, 0.7);
+  font-family: var(--font-mono, 'Space Mono', monospace);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Visibility states */
+.graph-node--on { opacity: 1; pointer-events: auto; }
+.graph-node--half { opacity: 0.5; pointer-events: auto; }
+.graph-node--hid  { opacity: 0; pointer-events: none; }
+
+/* Edges */
+.graph-edge {
+  stroke: var(--black, #0a0a0a);
+  stroke-width: 1.5;
+  transition: opacity 0.7s ease;
+}
+
+.graph-edge--on  { opacity: 0.6; }
+.graph-edge--half { opacity: 0.25; }
+.graph-edge--hid  { opacity: 0; }
+
+/* Controls */
+.graph-controls {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 20;
+  background: var(--cream, #f5f0e8);
+  border: 3px solid var(--black, #0a0a0a);
+  box-shadow: 4px 4px 0 var(--black, #0a0a0a);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graph-controls__label {
+  font-size: 0.7rem;
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--black, #0a0a0a);
+}
+
+.graph-controls__slider {
+  width: 100px;
+  accent-color: var(--yellow, #ffd000);
+  cursor: pointer;
+}
+
+/* Legend */
+.graph-legend {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  z-index: 20;
+  background: var(--cream, #f5f0e8);
+  border: 3px solid var(--black, #0a0a0a);
+  box-shadow: 4px 4px 0 var(--black, #0a0a0a);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-family: var(--font-body, 'Space Grotesk', sans-serif);
+  color: var(--black, #0a0a0a);
+}
+
+.graph-legend-swatch {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid var(--black, #0a0a0a);
+}
+
+.graph-legend-swatch--namespace { background: var(--yellow, #ffd000); }
+.graph-legend-swatch--user { background: var(--cream, #f5f0e8); border-radius: 50%; }
+.graph-legend-swatch--message { background: #fff; }
+.graph-legend-swatch--file { background: #fff; }
+
+/* Loading / empty / error states */
+.graph-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 16px;
+}
+
+.graph-loading-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.graph-loading-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--yellow, #ffd000);
+  border: 2px solid var(--black, #0a0a0a);
+  animation: graph-pulse 1.2s ease-in-out infinite;
+}
+
+.graph-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.graph-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+.graph-loading-label {
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  font-size: 1rem;
+  color: var(--black, #0a0a0a);
+}
+
+.graph-empty,
+.graph-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+
+.graph-empty-icon,
+.graph-error-icon {
+  font-size: 3rem;
+}
+
+.graph-empty-title,
+.graph-error-title {
+  font-family: var(--font-heading, 'Archivo Black', sans-serif);
+  font-size: 1.5rem;
+  color: var(--black, #0a0a0a);
+}
+
+.graph-empty-desc,
+.graph-error-desc {
+  font-family: var(--font-body, 'Space Grotesk', sans-serif);
+  font-size: 0.9rem;
+  color: rgba(10, 10, 10, 0.7);
+  max-width: 360px;
+}
+
+@keyframes graph-pulse {
+  0%, 80%, 100% { transform: scale(1); opacity: 1; }
+  40% { transform: scale(1.5); opacity: 0.6; }
+}
