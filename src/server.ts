@@ -101,9 +101,10 @@ export function buildApp(database: Database): Express {
       "users:read",
     ].join(","));
     // User scopes — exclude bot-only scopes (commands, app_mentions:read)
-    // users.identity:basic is required for users.identity{} to get team + user IDs
+    // openid + users.identity:read are required for users.identity{} to get team + user IDs
     url.searchParams.set("user_scope", [
-      "users.identity:basic",
+      "openid",
+      "users.identity:read",
       "channels:history",
       "groups:history",
       "im:history",
@@ -139,25 +140,18 @@ export function buildApp(database: Database): Express {
     }
 
     try {
-      const client = new WebClient(clientSecret ? undefined : undefined);
-      const result = await client.oauth.v2.access({
+      const result = await new WebClient().oauth.v2.access({
         client_id: clientId,
         client_secret: clientSecret,
         redirect_uri: `${publicBaseUrl}/auth/slack/callback`,
         code,
       });
 
-      if (!result.authed_user?.id) {
-        throw new Error("Missing authed user from OAuth v2 response");
-      }
-
-      // Get user identity (team + user id) via dedicated identity API
-      const identity = await new WebClient(result.authed_user.access_token!).users.identity({});
-      const teamId = identity.team?.id;
-      const userId = identity.user?.id;
+      const userId = result.authed_user?.id;
+      const teamId = result.team?.id;
 
       if (!teamId || !userId) {
-        throw new Error("Missing team or user id from users.identity response");
+        throw new Error("Missing team or user id from OAuth v2 response");
       }
 
       // Find workspace by teamId
