@@ -100,11 +100,10 @@ export function buildApp(database: Database): Express {
       "commands",
       "users:read",
     ].join(","));
-    // User scopes — exclude bot-only scopes (commands, app_mentions:read)
-    // openid + users.identity:read are required for users.identity{} to get team + user IDs
+    // User scopes — exclude bot-only scopes (commands, app_mentions:read).
+    // oauth.v2.access already returns team.id and authed_user.id directly, so we don't need
+    // users.identity:read or openid in the user_scope to get team/user IDs.
     url.searchParams.set("user_scope", [
-      "openid",
-      "users.identity:read",
       "channels:history",
       "groups:history",
       "im:history",
