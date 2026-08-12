@@ -131,6 +131,23 @@ export const messages = pgTable(
   ],
 );
 
+export const messageMentions = pgTable(
+  "message_mentions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => messages.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("message_mentions_message_user_unique").on(t.messageId, t.slackUserId),
+    index("message_mentions_user_idx").on(t.slackUserId),
+    index("message_mentions_message_idx").on(t.messageId),
+  ],
+);
+
 export const files = pgTable(
   "files",
   {

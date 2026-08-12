@@ -57,6 +57,13 @@
       "when": 1786435074168,
       "tag": "0007_low_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786522519324,
+      "tag": "0008_sharp_warbound",
+      "breakpoints": true
     }
   ]
 }

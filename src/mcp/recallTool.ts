@@ -1,6 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { Database } from "../db/client.js";
-import { messages, namespaces } from "../db/schema.js";
+import { messages, namespaces, messageMentions } from "../db/schema.js";
 import { findParticipantNamespace } from "../db/participation.js";
 import { getSignedDownloadUrl } from "../storage/bucket.js";
 import { readWalrusBlob } from "../storage/walrusMemory.js";
@@ -42,38 +42,36 @@ export interface DelegateNamespace {
 }
 
 export async function listDelegateNamespaces(db: Database, delegateUser: DelegateUser): Promise<DelegateNamespace[]> {
-  const participantRows = await db
+  // Namespace IDs where the user authored a message
+  const authoredRows = await db
     .selectDistinct({ namespaceId: messages.namespaceId })
     .from(messages)
     .innerJoin(namespaces, eq(messages.namespaceId, namespaces.id))
     .where(and(eq(namespaces.workspaceId, delegateUser.workspaceId), eq(messages.slackUserId, delegateUser.slackUserId)));
 
-  const participantIds = new Set(
-    participantRows
-      .filter((row) => row.namespaceId)
-      .map((row) => row.namespaceId),
-  );
+  // Namespace IDs where the user was @mentioned in any message
+  const mentionedRows = await db
+    .selectDistinct({ namespaceId: messages.namespaceId })
+    .from(messageMentions)
+    .innerJoin(messages, eq(messageMentions.messageId, messages.id))
+    .innerJoin(namespaces, eq(messages.namespaceId, namespaces.id))
+    .where(and(eq(namespaces.workspaceId, delegateUser.workspaceId), eq(messageMentions.slackUserId, delegateUser.slackUserId)));
 
-  if (participantIds.size === 0) return [];
+  const allNamespaceIds = [...authoredRows, ...mentionedRows]
+    .map((r) => r.namespaceId)
+    .filter((id): id is string => Boolean(id));
 
-  const allRows = await db
+  if (allNamespaceIds.length === 0) return [];
+
+  const uniqueIds = [...new Set(allNamespaceIds)];
+
+  const rows = await db
     .select()
     .from(namespaces)
     .where(eq(namespaces.workspaceId, delegateUser.workspaceId))
     .orderBy(desc(namespaces.createdAt));
 
-  const visible: DelegateNamespace[] = [];
-  for (const namespace of allRows) {
-    if (!participantIds.has(namespace.id)) continue;
-    const [participation] = await db
-      .select({ id: messages.id })
-      .from(messages)
-      .where(and(eq(messages.namespaceId, namespace.id), eq(messages.slackUserId, delegateUser.slackUserId)));
-    if (!participation) continue;
-    visible.push(namespace);
-  }
-
-  return visible;
+  return rows.filter((n) => uniqueIds.includes(n.id));
 }
 
 function decodeWalrusMemory(bytes: Uint8Array): string | null {

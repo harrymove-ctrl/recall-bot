@@ -2,12 +2,13 @@ import { and, eq } from "drizzle-orm";
 import type { App } from "@slack/bolt";
 import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
-import { namespaces, messages } from "../db/schema.js";
+import { namespaces, messages, messageMentions } from "../db/schema.js";
 import { resolveWorkspaceByTeamId } from "../db/workspaces.js";
 import { backfillThread } from "./backfill.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
 import { recordLinearIssueLinks } from "./linearLinks.js";
 import { persistMessageToWalrus } from "../storage/walrusMemory.js";
+import { extractMentionedUserIds } from "./mentions.js";
 
 interface AppMentionLikeEvent {
   channel: string;
@@ -102,6 +103,17 @@ export async function handleMessage(params: {
     })
     .onConflictDoNothing({ target: [messages.namespaceId, messages.slackTs] })
     .returning();
+
+  // Store @mentions from this message so mentioned users can see the namespace
+  if (messageRow && message.text) {
+    const mentionedIds = extractMentionedUserIds(message.text);
+    for (const uid of mentionedIds) {
+      await db
+        .insert(messageMentions)
+        .values({ messageId: messageRow.id, slackUserId: uid })
+        .onConflictDoNothing();
+    }
+  }
 
   if (messageRow && message.files?.length) {
     for (const file of message.files) {

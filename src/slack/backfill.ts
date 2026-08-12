@@ -1,10 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { WebClient } from "@slack/web-api";
 import type { Database } from "../db/client.js";
-import { namespaces, messages, files } from "../db/schema.js";
+import { namespaces, messages, files, messageMentions } from "../db/schema.js";
 import { captureSlackFile, type SlackFileObject } from "./files.js";
 import { recordLinearIssueLinks } from "./linearLinks.js";
 import { persistMessageToWalrus } from "../storage/walrusMemory.js";
+import { extractMentionedUserIds } from "./mentions.js";
 
 export interface BackfillThreadParams {
   db: Database;
@@ -125,6 +126,17 @@ export async function backfillThread(params: BackfillThreadParams): Promise<{ na
         })
         .onConflictDoNothing({ target: [messages.namespaceId, messages.slackTs] })
         .returning();
+
+      // Store @mentions from this message — runs for newly inserted messages only
+      if (messageRow && raw.text) {
+        const mentionedIds = extractMentionedUserIds(raw.text);
+        for (const uid of mentionedIds) {
+          await db
+            .insert(messageMentions)
+            .values({ messageId: messageRow.id, slackUserId: uid })
+            .onConflictDoNothing();
+        }
+      }
 
       // Runs unconditionally — for newly inserted AND already-existing messages — so re-tagging
       // a thread doubles as retroactive link detection for namespaces captured before this
