@@ -98,7 +98,6 @@ export function buildApp(database: Database): Express {
       "im:write",
       "files:read",
       "commands",
-      "users:read",
     ].join(","));
     // User scopes — exclude bot-only scopes (commands, app_mentions:read).
     // oauth.v2.access already returns team.id and authed_user.id directly, so we don't need
