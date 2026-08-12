@@ -431,6 +431,13 @@ export function NoSession() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const mcpUrl = `${origin}/mcp`;
   const { copied, copy } = useCopyButton();
+
+  // Handle error params returned from OAuth flow
+  const authError = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("slack_auth_error")
+    : null;
+  const isWorkspaceNotInstalled = authError === "workspace_not_found";
+
   return (
     <>
       <nav className="nav-bar">
@@ -449,8 +456,38 @@ export function NoSession() {
           <span className="breadcrumb-item breadcrumb-item--current">Dashboard</span>
         </div>
 
-        <h1 className="heading-xl">Recall Bot Dashboard</h1>
-        <p className="subtitle">Sign in with your Slack account to access and manage your captured threads.</p>
+        {isWorkspaceNotInstalled ? (
+          <>
+            <h1 className="heading-xl">Your workspace isn't set up yet</h1>
+            <p className="subtitle">Recall-bot needs to be installed in your Slack workspace before you can access your dashboard.</p>
+
+            <div className="sign-in-card">
+              <div className="sign-in-icon">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="#000" strokeWidth="2" fill="#fff7d1"/>
+                  <path d="M12 8v4M12 16h.01" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div className="sign-in-body">
+                <h2 className="sign-in-title">Install recall-bot in your workspace</h2>
+                <p className="sign-in-desc">
+                  Ask a workspace admin to install recall-bot. Once it's installed, you'll be able to sign in and access your captured threads.
+                </p>
+                <a href="/slack/install" className="btn-brutal btn-brutal-yellow sign-in-btn">
+                  Request workspace admin to install
+                </a>
+                <p className="sign-in-hint">
+                  Only a workspace admin can install apps. If you're the admin, click the button above to get started.
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="heading-xl">Recall Bot Dashboard</h1>
+            <p className="subtitle">Sign in with your Slack account to access and manage your captured threads.</p>
+          </>
+        )}
 
         {/* Sign in card */}
         <div className="sign-in-card">

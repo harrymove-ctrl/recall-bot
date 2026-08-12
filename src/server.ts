@@ -164,7 +164,9 @@ export function buildApp(database: Database): Express {
         .where(eq(workspaces.slackTeamId, teamId));
 
       if (!workspace) {
-        res.redirect("/dashboard?slack_auth_error=workspace_not_found");
+        // User is authenticated with Slack but their workspace doesn't have recall-bot installed.
+        // Redirect to the workspace install flow so they (or an admin) can install it first.
+        res.redirect("/slack/install");
         return;
       }
 
