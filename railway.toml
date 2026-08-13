@@ -1,0 +1,6 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "node dist/server.js"
+healthCheckPath = "/healtz"
