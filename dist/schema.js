@@ -1,0 +1,204 @@
+import { pgTable, pgEnum, uuid, text, varchar, timestamp, unique, index, } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+export const namespaceStatusEnum = pgEnum("namespace_status", ["active", "archived"]);
+export const fileStatusEnum = pgEnum("file_status", ["pending", "stored", "failed"]);
+export const workspaces = pgTable("workspaces", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slackTeamId: varchar("slack_team_id", { length: 32 }).notNull().unique(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export const installations = pgTable("installations", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+        .notNull()
+        .references(() => workspaces.id, { onDelete: "cascade" })
+        .unique(),
+    botToken: text("bot_token").notNull(),
+    botUserId: varchar("bot_user_id", { length: 32 }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export const workspaceClaimTokens = pgTable("workspace_claim_tokens", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+        .notNull()
+        .references(() => workspaces.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("workspace_claim_tokens_workspace_id_idx").on(t.workspaceId)]);
+export const userClaimTokens = pgTable("user_claim_tokens", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+        .notNull()
+        .references(() => workspaces.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    index("user_claim_tokens_workspace_id_idx").on(t.workspaceId),
+    index("user_claim_tokens_workspace_slack_user_idx").on(t.workspaceId, t.slackUserId),
+]);
+export const users = pgTable("users", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+        .notNull()
+        .references(() => workspaces.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    delegateKeyHash: text("delegate_key_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    unique("users_workspace_slack_user_unique").on(t.workspaceId, t.slackUserId),
+    index("users_delegate_key_hash_idx").on(t.delegateKeyHash),
+]);
+export const namespaces = pgTable("namespaces", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+        .notNull()
+        .references(() => workspaces.id, { onDelete: "cascade" }),
+    channelId: varchar("channel_id", { length: 32 }).notNull(),
+    threadTs: varchar("thread_ts", { length: 32 }).notNull(),
+    label: text("label"),
+    status: namespaceStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    unique("namespaces_workspace_channel_thread_unique").on(t.workspaceId, t.channelId, t.threadTs),
+    index("namespaces_workspace_id_idx").on(t.workspaceId),
+]);
+export const messages = pgTable("messages", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    namespaceId: uuid("namespace_id")
+        .notNull()
+        .references(() => namespaces.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    text: text("text").notNull(),
+    slackTs: varchar("slack_ts", { length: 32 }).notNull(),
+    walrusBlobId: text("walrus_blob_id"),
+    walrusBlobObjectId: text("walrus_blob_object_id"),
+    walrusTxDigest: text("walrus_tx_digest"),
+    walrusEndEpoch: text("walrus_end_epoch"),
+    walrusStorageStatus: varchar("walrus_storage_status", { length: 16 }).notNull().default("pending"),
+    walrusStoredAt: timestamp("walrus_stored_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    unique("messages_namespace_slack_ts_unique").on(t.namespaceId, t.slackTs),
+    index("messages_namespace_id_idx").on(t.namespaceId),
+    index("messages_slack_user_id_idx").on(t.slackUserId),
+]);
+export const messageMentions = pgTable("message_mentions", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    messageId: uuid("message_id")
+        .notNull()
+        .references(() => messages.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    unique("message_mentions_message_user_unique").on(t.messageId, t.slackUserId),
+    index("message_mentions_user_idx").on(t.slackUserId),
+    index("message_mentions_message_idx").on(t.messageId),
+]);
+export const files = pgTable("files", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    messageId: uuid("message_id")
+        .notNull()
+        .references(() => messages.id, { onDelete: "cascade" }),
+    bucketKey: text("bucket_key"),
+    walrusBlobId: text("walrus_blob_id"),
+    walrusBlobObjectId: text("walrus_blob_object_id"),
+    walrusTxDigest: text("walrus_tx_digest"),
+    walrusEndEpoch: text("walrus_end_epoch"),
+    walrusStorageStatus: varchar("walrus_storage_status", { length: 16 }).notNull().default("pending"),
+    walrusStoredAt: timestamp("walrus_stored_at", { withTimezone: true }),
+    originalName: text("original_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    status: fileStatusEnum("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("files_message_id_idx").on(t.messageId)]);
+export const namespaceLinearIssues = pgTable("namespace_linear_issues", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    namespaceId: uuid("namespace_id")
+        .notNull()
+        .references(() => namespaces.id, { onDelete: "cascade" }),
+    workspaceSlug: varchar("workspace_slug", { length: 64 }).notNull(),
+    issueIdentifier: varchar("issue_identifier", { length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    unique("namespace_linear_issues_namespace_identifier_unique").on(t.namespaceId, t.issueIdentifier),
+    index("namespace_linear_issues_namespace_id_idx").on(t.namespaceId),
+]);
+export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
+    installation: one(installations, {
+        fields: [workspaces.id],
+        references: [installations.workspaceId],
+    }),
+    users: many(users),
+    namespaces: many(namespaces),
+}));
+export const installationsRelations = relations(installations, ({ one }) => ({
+    workspace: one(workspaces, { fields: [installations.workspaceId], references: [workspaces.id] }),
+}));
+export const usersRelations = relations(users, ({ one }) => ({
+    workspace: one(workspaces, { fields: [users.workspaceId], references: [workspaces.id] }),
+}));
+export const namespacesRelations = relations(namespaces, ({ one, many }) => ({
+    workspace: one(workspaces, { fields: [namespaces.workspaceId], references: [workspaces.id] }),
+    messages: many(messages),
+    linearIssues: many(namespaceLinearIssues),
+}));
+export const messagesRelations = relations(messages, ({ one, many }) => ({
+    namespace: one(namespaces, { fields: [messages.namespaceId], references: [namespaces.id] }),
+    files: many(files),
+}));
+export const filesRelations = relations(files, ({ one }) => ({
+    message: one(messages, { fields: [files.messageId], references: [messages.id] }),
+}));
+export const namespaceLinearIssuesRelations = relations(namespaceLinearIssues, ({ one }) => ({
+    namespace: one(namespaces, { fields: [namespaceLinearIssues.namespaceId], references: [namespaces.id] }),
+}));
+export const slackUserProfiles = pgTable("slack_user_profiles", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+        .notNull()
+        .references(() => workspaces.id, { onDelete: "cascade" }),
+    slackUserId: varchar("slack_user_id", { length: 32 }).notNull(),
+    displayName: text("display_name"),
+    avatarUrl: text("avatar_url"),
+    // The moment of the *last attempt*, success or failure. A null displayName with a fresh
+    // resolvedAt IS a cached result — "we tried and got nothing usable" — which is what makes the
+    // staleness policy double as both a cache TTL and a retry backoff with no extra status column.
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    unique("slack_user_profiles_workspace_slack_user_unique").on(t.workspaceId, t.slackUserId),
+    index("slack_user_profiles_workspace_id_idx").on(t.workspaceId),
+]);
+export const slackUserProfilesRelations = relations(slackUserProfiles, ({ one }) => ({
+    workspace: one(workspaces, { fields: [slackUserProfiles.workspaceId], references: [workspaces.id] }),
+}));
+export const recallEvents = pgTable("recall_events", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    namespaceId: uuid("namespace_id")
+        .notNull()
+        .references(() => namespaces.id, { onDelete: "cascade" }),
+    delegateUserId: uuid("delegate_user_id")
+        .notNull()
+        .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+    index("recall_events_namespace_id_idx").on(t.namespaceId),
+    index("recall_events_namespace_id_created_at_idx").on(t.namespaceId, t.createdAt),
+]);
+export const recallEventsRelations = relations(recallEvents, ({ one }) => ({
+    namespace: one(namespaces, { fields: [recallEvents.namespaceId], references: [namespaces.id] }),
+    delegateUser: one(users, { fields: [recallEvents.delegateUserId], references: [users.id] }),
+}));
+//# sourceMappingURL=schema.js.map
