@@ -87,9 +87,10 @@ export function buildApp(database: Database): Express {
     const redirectUri = `${publicBaseUrl}/auth/slack/callback`;
     const url = new URL("https://slack.com/oauth/v2/authorize");
     url.searchParams.set("client_id", clientId);
-    // Bot scopes — include commands and app_mentions:read (bot-only)
+    // Bot scopes — only user-compatible scopes (no bot-only scopes like commands, app_mentions:read).
+    // Including bot-only scopes in `scope` triggers Slack's admin install flow, which non-admin users
+    // should never see. Bot-only scopes are moved to user_scope below.
     url.searchParams.set("scope", [
-      "app_mentions:read",
       "channels:history",
       "groups:history",
       "im:history",
@@ -97,11 +98,11 @@ export function buildApp(database: Database): Express {
       "chat:write",
       "im:write",
       "files:read",
-      "commands",
     ].join(","));
-    // User scopes — exclude bot-only scopes (commands, app_mentions:read).
-    // oauth.v2.access already returns team.id and authed_user.id directly, so we don't need
-    // users.identity:read or openid in the user_scope to get team/user IDs.
+    // User scopes — includes bot-only scopes (commands, app_mentions:read) because these are
+    // needed for the bot's operations but can be granted as user tokens via oauth.v2.access.
+    // oauth.v2.access returns both authed_user.access_token and bot_token when the app is
+    // installed in the workspace, so the user token carries these scopes.
     url.searchParams.set("user_scope", [
       "channels:history",
       "groups:history",
@@ -111,6 +112,8 @@ export function buildApp(database: Database): Express {
       "im:write",
       "files:read",
       "users:read",
+      "commands",
+      "app_mentions:read",
     ].join(","));
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
